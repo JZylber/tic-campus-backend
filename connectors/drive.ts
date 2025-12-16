@@ -3,39 +3,87 @@ import process from "node:process";
 import { authenticate } from "@google-cloud/local-auth";
 import { google } from "googleapis";
 
+type SpreadsheetIdInformation = {
+  subject: string;
+  course: string;
+  year: number;
+  spreadsheetId: string;
+};
+
+let spreadsheetIds: SpreadsheetIdInformation[] = [];
+
 // The scope for reading file metadata.
-const SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"];
+const DRIVE_SCOPES = [
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
+];
+const SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
 // The path to the credentials file.
 const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
 
-/**
- * Lists the names and IDs of up to 10 files.
- */
-async function listFiles() {
+export async function getDriveClient() {
   // Authenticate with Google and get an authorized client.
   const auth = await authenticate({
-    scopes: SCOPES,
+    scopes: DRIVE_SCOPES,
     keyfilePath: CREDENTIALS_PATH,
   });
 
   // Create a new Drive API client.
   const drive = google.drive({ version: "v3", auth });
-  // Get the list of files.
-  const result = await drive.files.list({
-    pageSize: 10,
-    fields: "nextPageToken, files(id, name)",
-  });
-  const files = result.data.files;
-  if (!files || files.length === 0) {
-    console.log("No files found.");
-    return;
-  }
-
-  console.log("Files:");
-  // Print the name and ID of each file.
-  files.forEach((file) => {
-    console.log(`${file.name} (${file.id})`);
-  });
+  return drive;
 }
 
-await listFiles();
+export async function getSheetClient() {
+  // Authenticate with Google and get an authorized client.
+  const auth = await authenticate({
+    scopes: SHEETS_SCOPES,
+    keyfilePath: CREDENTIALS_PATH,
+  });
+
+  // Create a new Sheets API client.
+  const sheets = google.sheets({ version: "v4", auth });
+  return sheets;
+}
+
+async function updateSpreadsheetIds() {
+  const sheets = await getSheetClient();
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.MAIN_SPREADSHEET_ID!,
+    range: "Datos!A:D",
+  });
+  spreadsheetIds = res.data.values?.map((row) => ({
+    subject: row[0],
+    course: row[1],
+    year: Number(row[2]),
+    spreadsheetId: row[3],
+  })) as SpreadsheetIdInformation[];
+  return spreadsheetIds;
+}
+
+export async function getSpreadsheetId(
+  subject: string,
+  course: string,
+  year: number
+) {
+  // Find the spreadsheet ID in the cached list.
+  let info = spreadsheetIds.find(
+    (info) =>
+      info.subject === subject && info.course === course && info.year === year
+  );
+
+  // If not found, update the cached list and try again.
+  if (!info) {
+    await updateSpreadsheetIds();
+    info = spreadsheetIds.find(
+      (info) =>
+        info.subject === subject && info.course === course && info.year === year
+    );
+  }
+  // Throw an error if still not found.
+  if (!info) {
+    throw new Error(
+      `Spreadsheet ID not found for ${subject} ${course} ${year}`
+    );
+  }
+  return info.spreadsheetId;
+}
