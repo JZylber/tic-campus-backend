@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from "express";
 import dotenv from "dotenv";
-import { getSheetClient, getSpreadsheetId } from "./connectors/drive.ts";
+import { getSheetClient, getSpreadsheetId } from "./connectors/google.ts";
+import { getStudentId } from "./controllers/students.ts";
 
 // configures dotenv to work in your application
 dotenv.config();
@@ -8,14 +9,9 @@ const app = express();
 
 const PORT = process.env.PORT;
 
-app.get("/", async (request: Request, response: Response) => {
-  const sId = await getSpreadsheetId(
-    "Desarollo de Aplicaciones Informáticas",
-    "NR5A",
-    2025
-  );
-  response.status(200).send(`Spreadsheet ID: ${sId}`);
-});
+app.use(express.json());
+
+app.post("/student-id", getStudentId);
 
 app
   .listen(PORT, () => {

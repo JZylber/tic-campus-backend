@@ -1,32 +1,19 @@
-import path from "node:path";
 import process from "node:process";
-import { authenticate } from "@google-cloud/local-auth";
 import { google } from "googleapis";
 
-type SpreadsheetIdInformation = {
+let spreadsheetIds: SpreadsheetIdInformation[] = [];
+
+interface SpreadsheetIdInformation {
   subject: string;
   course: string;
   year: number;
   spreadsheetId: string;
-};
-
-let spreadsheetIds: SpreadsheetIdInformation[] = [];
-
-// The scope for reading file metadata.
-const DRIVE_SCOPES = [
-  "https://www.googleapis.com/auth/drive.metadata.readonly",
-];
-const SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
-// The path to the credentials file.
-const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
+}
 
 export async function getDriveClient() {
-  // Authenticate with Google and get an authorized client.
-  const auth = await authenticate({
-    scopes: DRIVE_SCOPES,
-    keyfilePath: CREDENTIALS_PATH,
+  const auth = new google.auth.GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/drive"],
   });
-
   // Create a new Drive API client.
   const drive = google.drive({ version: "v3", auth });
   return drive;
@@ -34,11 +21,9 @@ export async function getDriveClient() {
 
 export async function getSheetClient() {
   // Authenticate with Google and get an authorized client.
-  const auth = await authenticate({
-    scopes: SHEETS_SCOPES,
-    keyfilePath: CREDENTIALS_PATH,
+  const auth = new google.auth.GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
-
   // Create a new Sheets API client.
   const sheets = google.sheets({ version: "v4", auth });
   return sheets;
