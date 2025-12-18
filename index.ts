@@ -6,7 +6,7 @@ import { setGoogleCredentials } from "./connectors/google.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
-setGoogleCredentials();
+await setGoogleCredentials();
 
 const app = express();
 

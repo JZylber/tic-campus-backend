@@ -27,6 +27,8 @@ export async function setGoogleCredentials() {
 
     // Write the credentials file to the temporary directory
     await fs.writeFile(keyFilename, credentialsJson, "utf-8");
+
+    console.log("Google credentials file created at:", keyFilename);
   }
 }
 
