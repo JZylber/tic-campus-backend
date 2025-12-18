@@ -1,7 +1,6 @@
-import express, { type Request, type Response } from "express";
+import express from "express";
 import dotenv from "dotenv";
-import { getSheetClient, getSpreadsheetId } from "./connectors/google.ts";
-import { getStudentId } from "./controllers/students.ts";
+import { getStudentData } from "./controllers/students.ts";
 
 // configures dotenv to work in your application
 dotenv.config();
@@ -11,7 +10,7 @@ const PORT = process.env.PORT;
 
 app.use(express.json());
 
-app.post("/student-id", getStudentId);
+app.post("/student", getStudentData);
 
 app
   .listen(PORT, () => {

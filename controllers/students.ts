@@ -3,8 +3,8 @@ import type { Request, Response } from "express";
 import { getSheetClient } from "../connectors/google.ts";
 import Fuse from "fuse.js";
 
-export async function getStudentId(
-  request: Request<{}, {}, { name: string; surname: string }>,
+export async function getStudentData(
+  request: Request<{}, {}, { name: string; surname: string; year: number }>,
   response: Response
 ) {
   const sheetsAPI = await getSheetClient();
@@ -20,7 +20,7 @@ export async function getStudentId(
     studentCoursesPromise,
     studentsPromise,
   ]);
-  const { name, surname } = request.body;
+  const { name, surname, year } = request.body;
   const students = studentsRes.data.values?.map((row) => ({
     id: row[0],
     surname: row[3],
@@ -37,11 +37,8 @@ export async function getStudentId(
       .send({ message: "No student found with the given name and surname." });
   }
   const studentId = possibleStudents[0]!.item.id;
-  const coursePerYear = studentCoursesRes.data.values
-    ?.filter((row) => row[0] === studentId)
-    .reduce((acc, row) => {
-      acc[Number(row[3])] = row[4];
-      return acc;
-    }, {} as Record<number, string>);
-  return response.status(200).send({ studentId, coursePerYear });
+  const currentCourse = studentCoursesRes.data.values?.find(
+    (row) => row[0] === studentId && Number(row[3]) === year
+  )?.[4];
+  return response.status(200).send({ id: studentId, course: currentCourse });
 }
