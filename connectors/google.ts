@@ -1,5 +1,7 @@
 import process from "node:process";
 import { google } from "googleapis";
+import { promises as fs } from "fs";
+import path from "path";
 
 let spreadsheetIds: SpreadsheetIdInformation[] = [];
 
@@ -8,6 +10,24 @@ interface SpreadsheetIdInformation {
   course: string;
   year: number;
   spreadsheetId: string;
+}
+
+export async function setGoogleCredentials() {
+  const keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (process.env.GOOGLE_CREDENTIALS_BASE64 && keyFilename) {
+    // Decode the base64 credentials
+    const credentialsJson = Buffer.from(
+      process.env.GOOGLE_CREDENTIALS_BASE64,
+      "base64"
+    ).toString("utf-8");
+
+    // Ensure the /tmp directory exists
+    await fs.mkdir(path.dirname(keyFilename), { recursive: true });
+
+    // Write the credentials file to the temporary directory
+    await fs.writeFile(keyFilename, credentialsJson, "utf-8");
+  }
 }
 
 export async function getDriveClient() {
