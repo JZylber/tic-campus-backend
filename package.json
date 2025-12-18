@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "vercel-dev": "vercel dev",
     "dev": "nodemon index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
@@ -17,7 +20,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "fuse.js": "^7.1.0",
-    "googleapis": "^105.0.0"
+    "googleapis": "^105.0.0",
+    "vercel": "^50.1.2"
   },
   "devDependencies": {
     "@types/dotenv": "^8.2.3",

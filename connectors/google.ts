@@ -14,23 +14,31 @@ interface SpreadsheetIdInformation {
 
 export async function setGoogleCredentials() {
   const keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  // See if file already exists
+  try {
+    if (keyFilename) {
+      await fs.access(keyFilename);
+      return;
+    }
+  } catch {
+    // File does not exist, will create it
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64 && keyFilename) {
+      // Decode the base64 credentials
+      const credentialsJson = Buffer.from(
+        process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
+        "base64"
+      ).toString("utf-8");
 
-  if (process.env.GOOGLE_CREDENTIALS_BASE64 && keyFilename) {
-    // Decode the base64 credentials
-    const credentialsJson = Buffer.from(
-      process.env.GOOGLE_CREDENTIALS_BASE64,
-      "base64"
-    ).toString("utf-8");
-
-    // Ensure the /tmp directory exists
-    await fs.mkdir(path.dirname(keyFilename), { recursive: true });
-
-    // Write the credentials file to the temporary directory
-    await fs.writeFile(keyFilename, credentialsJson, "utf-8");
+      // Ensure the /tmp directory exists
+      await fs.mkdir(path.dirname(keyFilename), { recursive: true });
+      // Write the credentials file to the temporary directory
+      await fs.writeFile(keyFilename, credentialsJson, "utf-8");
+    }
   }
 }
 
 export async function getDriveClient() {
+  await setGoogleCredentials();
   const auth = new google.auth.GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/drive"],
   });
@@ -40,7 +48,7 @@ export async function getDriveClient() {
 }
 
 export async function getSheetClient() {
-  // Authenticate with Google and get an authorized client.
+  await setGoogleCredentials();
   const auth = new google.auth.GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });

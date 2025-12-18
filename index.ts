@@ -1,12 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import { getStudentData } from "./controllers/students.ts";
-import { setGoogleCredentials } from "./connectors/google.ts";
-
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
-setGoogleCredentials();
 
 const app = express();
 
