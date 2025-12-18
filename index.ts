@@ -1,15 +1,20 @@
-import express, { type Request, type Response } from "express";
+import express from "express";
 import dotenv from "dotenv";
+import { getStudentData } from "./controllers/students.ts";
+import { setGoogleCredentials } from "./connectors/google.ts";
 
 // configures dotenv to work in your application
 dotenv.config();
+// setup google credentials
+setGoogleCredentials();
+
 const app = express();
 
 const PORT = process.env.PORT;
 
-app.get("/", (reques: Request, response: Response) => {
-  response.status(200).send("Hello World");
-});
+app.use(express.json());
+
+app.post("/student", getStudentData);
 
 app
   .listen(PORT, () => {
