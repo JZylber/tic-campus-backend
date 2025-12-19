@@ -23,6 +23,8 @@ export async function getStudentData(
   const { name, surname, year } = request.body;
   const students = studentsRes.data.values?.map((row) => ({
     id: row[0],
+    dni: row[1],
+    mail: row[2],
     surname: row[3],
     name: row[4],
   }));
@@ -36,9 +38,13 @@ export async function getStudentData(
       .status(404)
       .send({ message: "No student found with the given name and surname." });
   }
-  const studentId = possibleStudents[0]!.item.id;
+  let studentId = possibleStudents[0]!.item.id;
   const currentCourse = studentCoursesRes.data.values?.find(
     (row) => row[0] === studentId && Number(row[3]) === year
   )?.[4];
+  // IF year is 2025, use DNI as student ID
+  if (year === 2025) {
+    studentId = possibleStudents[0]!.item.dni;
+  }
   return response.status(200).send({ id: studentId, course: currentCourse });
 }
