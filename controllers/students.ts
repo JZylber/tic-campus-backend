@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { getSheetClient } from "../connectors/google.ts";
 import Fuse from "fuse.js";
+import { getColumnIndex } from "./shared.ts";
 
 export async function getStudentData(
   request: Request<{}, {}, { name: string; surname: string; year: number }>,
@@ -21,12 +22,13 @@ export async function getStudentData(
     studentsPromise,
   ]);
   const { name, surname, year } = request.body;
+  const rowHeaders: string[] = studentsRes.data.values?.shift() || [];
   const students = studentsRes.data.values?.map((row) => ({
-    id: row[0],
-    dni: row[1],
-    mail: row[2],
-    surname: row[3],
-    name: row[4],
+    id: row[getColumnIndex("Id", rowHeaders)],
+    dni: row[getColumnIndex("DNI", rowHeaders)],
+    mail: row[getColumnIndex("Mail", rowHeaders)],
+    surname: row[getColumnIndex("Apellido", rowHeaders)],
+    name: row[getColumnIndex("Nombre", rowHeaders)],
   }));
   const fuse = new Fuse(students!, {
     keys: ["name", "surname"],
