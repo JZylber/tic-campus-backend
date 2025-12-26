@@ -3,8 +3,6 @@ import { google } from "googleapis";
 import { promises as fs } from "fs";
 import path from "path";
 
-let spreadsheetIds: SpreadsheetIdInformation[] = [];
-
 interface SpreadsheetIdInformation {
   subject: string;
   course: string;
@@ -57,19 +55,20 @@ export async function getSheetClient() {
   return sheets;
 }
 
-async function updateSpreadsheetIds() {
+async function getSpreadsheetIds() {
   const sheets = await getSheetClient();
-
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.MAIN_SPREADSHEET_ID!,
     range: "Datos!A:D",
   });
-  spreadsheetIds = res.data.values?.map((row) => ({
-    subject: row[0],
-    course: row[1],
-    year: Number(row[2]),
-    spreadsheetId: row[3],
-  })) as SpreadsheetIdInformation[];
+  let spreadsheetIds: SpreadsheetIdInformation[] = res.data.values?.map(
+    (row) => ({
+      subject: row[0],
+      course: row[1],
+      year: Number(row[2]),
+      spreadsheetId: row[3],
+    })
+  ) as SpreadsheetIdInformation[];
   return spreadsheetIds;
 }
 
@@ -78,21 +77,13 @@ export async function getSpreadsheetId(
   course: string,
   year: number
 ) {
+  let spreadsheetIds = await getSpreadsheetIds();
   // Find the spreadsheet ID in the cached list.
   let info = spreadsheetIds.find(
     (info) =>
       info.subject === subject && info.course === course && info.year === year
   );
-
-  // If not found, update the cached list and try again.
-  if (!info) {
-    await updateSpreadsheetIds();
-    info = spreadsheetIds.find(
-      (info) =>
-        info.subject === subject && info.course === course && info.year === year
-    );
-  }
-  // Throw an error if still not found.
+  // Throw an error if not found.
   if (!info) {
     throw new Error(
       `Spreadsheet ID not found for ${subject} ${course} ${year}`
