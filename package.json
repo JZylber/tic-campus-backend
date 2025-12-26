@@ -17,6 +17,7 @@
   "packageManager": "pnpm@10.22.0",
   "dependencies": {
     "@google-cloud/local-auth": "2.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "fuse.js": "^7.1.0",
@@ -24,6 +25,7 @@
     "vercel": "^50.1.2"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.5",
     "nodemon": "^3.1.11",

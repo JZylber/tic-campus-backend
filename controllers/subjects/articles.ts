@@ -71,7 +71,12 @@ export async function getSubjectArticles(
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
-  let spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+  let spreadsheetId = "";
+  try {
+    spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+  } catch (error) {
+    return response.status(404).send({ error: (error as Error).message });
+  }
   const sheets = await getSheetClient();
   const unitsPromise = sheets.spreadsheets.values.get({
     spreadsheetId,

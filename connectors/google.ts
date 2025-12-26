@@ -86,7 +86,7 @@ export async function getSpreadsheetId(
   // Throw an error if not found.
   if (!info) {
     throw new Error(
-      `Spreadsheet ID not found for ${subject} ${course} ${year}`
+      `Spreadsheet ID not found for ${subject} - ${course} - ${year}`
     );
   }
   return info.spreadsheetId;
