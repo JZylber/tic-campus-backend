@@ -66,16 +66,23 @@ export type UnitsTable = Array<{
 }>;
 
 export async function getSubjectArticles(
-  request: Request<{ subject: string; course: string; year: string }>,
+  request: Request<
+    { subject: string; course: string; year: string },
+    {},
+    {},
+    { dataSheetId?: string }
+  >,
   response: Response
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
-  let spreadsheetId = "";
-  try {
-    spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
-  } catch (error) {
-    return response.status(404).send({ error: (error as Error).message });
+  let spreadsheetId = request.query.dataSheetId || "";
+  if (!spreadsheetId) {
+    try {
+      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+    } catch (error) {
+      return response.status(404).send({ error: (error as Error).message });
+    }
   }
   const sheets = await getSheetClient();
   const unitsPromise = sheets.spreadsheets.values.get({
