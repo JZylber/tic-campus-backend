@@ -5,6 +5,7 @@ import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 import { getTemplateSubjects } from "./controllers/subjects/allSubjects.ts";
+import { getSubjectMaterials } from "./controllers/subjects/material.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -23,6 +24,7 @@ app.post("/student", getStudentData);
 // Subjects
 app.get("/subjects/:templateId", getTemplateSubjects);
 app.get("/articles/:subject/:course/:year", getSubjectArticles);
+app.get("/material/:subject/:course/:year", getSubjectMaterials);
 app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
 app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
 
