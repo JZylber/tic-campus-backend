@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import { getStudentData } from "./controllers/students.ts";
 import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
-import { getHomeLinks } from "./controllers/subjects/homelinks.ts";
+import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -22,6 +22,7 @@ app.post("/student", getStudentData);
 // Subjects
 app.get("/articles/:subject/:course/:year", getSubjectArticles);
 app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
+app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
 
 app
   .listen(PORT, () => {
