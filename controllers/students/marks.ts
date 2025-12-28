@@ -33,7 +33,7 @@ interface RedoActivity extends MarkedActivity {
 
 type FixedMarks = Record<
   string,
-  { value: string; observation?: string; suggestion?: string } | undefined
+  { mark: string; observation?: string; suggestion?: string } | undefined
 >;
 
 async function getMarksAndCriteria(subject: string, dataSheetId: string) {
@@ -278,10 +278,10 @@ export async function getStudentFixedMarks(
   // Map as Tipo: {value: Valor, observation: , suggestion: }
   const fixedMarks: FixedMarks = {};
   studentFixedMarks.forEach((mark) => {
-    // Some marks are Valor - Observación - Sugerencia
+    // Some marks are Nota - Observación - Sugerencia
     const valorParts = mark.Valor.split(" - ").map((part) => part.trim());
     fixedMarks[mark.Tipo] = {
-      value: valorParts[0]!,
+      mark: valorParts[0]!,
       observation: valorParts[1] || "",
       suggestion: valorParts[2] || "",
     };
