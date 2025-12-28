@@ -7,6 +7,7 @@ import type {
   RedosTable,
   SubjectTable,
   ContentsTable,
+  RedoRequestsTable,
 } from "../subjectSchema.ts";
 
 interface Activity {
@@ -167,4 +168,72 @@ export async function getStudentMarks(
     redoActivities: studentRedoActivities,
     criteria,
   });
+}
+
+export async function getRevisionRequests(
+  request: Request<
+    {},
+    {},
+    {
+      course: string;
+      year: string;
+      subject: string;
+      name: string;
+      surname: string;
+    },
+    { dataSheetId?: string }
+  >,
+  response: Response
+) {
+  const { subject, course, year, name, surname } = request.body;
+  let spreadsheetId = request.query.dataSheetId || "";
+  if (!spreadsheetId) {
+    try {
+      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+    } catch (error) {
+      return response.status(404).send({ error: (error as Error).message });
+    }
+  }
+  // Level is derived from Curso: "NR3A" -> 3, "NR5C" -> 5, etc.
+  const level = Number(course.match(/\d+/)?.[0] || 0);
+  const sheets = await getSheetClient();
+  // Get Reentrega A{level} and Reentrega N{level} sheets
+  const redoRequestsPromise = sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `Reentrega A${level}!A:F`,
+  });
+  const redoRequestsNPromise = sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `Reentrega N${level}!A:F`,
+  });
+  // Promises can fail independently if the sheets don't exist
+  const [redoRequestsRes, redoRequestsNRes] = await Promise.allSettled([
+    redoRequestsPromise,
+    redoRequestsNPromise,
+  ]);
+  let redoRequestsData: RedoRequestsTable = [];
+  if (redoRequestsRes.status === "fulfilled") {
+    redoRequestsData = redoRequestsData.concat(
+      asTableData(redoRequestsRes.value.data.values!) as RedoRequestsTable
+    );
+  }
+  if (redoRequestsNRes.status === "fulfilled") {
+    redoRequestsData = redoRequestsData.concat(
+      asTableData(redoRequestsNRes.value.data.values!) as RedoRequestsTable
+    );
+  }
+  // Filter those requests that are not reviewed and match name and surname to any of the members in "Integrantes". Format of "Integrantes" is "Surname - Name, Surname - Name, ..."
+  const pendingRequests = redoRequestsData.filter((request) => {
+    if (request.Revisado.toLowerCase() === "true") return false;
+    const integrantes = request.Integrantes.split(",").map((member) =>
+      member.trim().toLowerCase()
+    );
+    const fullName = `${surname} - ${name}`.toLowerCase();
+    return integrantes.includes(fullName);
+  });
+  // Get only ids of pending requests
+  const pendingRequestIds = pendingRequests.map(
+    (request) => request["Id Actividad"]
+  );
+  return response.status(200).send(pendingRequestIds);
 }
