@@ -30,7 +30,7 @@ app.use(cors());
 app.get("/students", getAllStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-app.post("/revisionRequests", getRevisionRequests);
+app.get("/revisionRequests/:subject/:course/:year", getRevisionRequests);
 
 // Subjects
 app.get("/subjects", getAllSubjects);

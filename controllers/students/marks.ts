@@ -172,21 +172,16 @@ export async function getStudentMarks(
 
 export async function getRevisionRequests(
   request: Request<
+    { course: string; year: string; subject: string },
     {},
     {},
-    {
-      course: string;
-      year: string;
-      subject: string;
-      name: string;
-      surname: string;
-    },
-    { dataSheetId?: string }
+    { dataSheetId?: string; name?: string; surname?: string }
   >,
   response: Response
 ) {
-  const { subject, course, year, name, surname } = request.body;
-  let spreadsheetId = request.query.dataSheetId || "";
+  const { subject, course, year } = request.params;
+  const { name = "", surname = "", dataSheetId = "" } = request.query;
+  let spreadsheetId = dataSheetId;
   if (!spreadsheetId) {
     try {
       spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
@@ -225,6 +220,7 @@ export async function getRevisionRequests(
   // Filter those requests that are not reviewed and match name and surname to any of the members in "Integrantes". Format of "Integrantes" is "Surname - Name, Surname - Name, ..."
   const pendingRequests = redoRequestsData.filter((request) => {
     if (request.Revisado.toLowerCase() === "true") return false;
+    if (!name || !surname) return true;
     const integrantes = request.Integrantes.split(",").map((member) =>
       member.trim().toLowerCase()
     );
