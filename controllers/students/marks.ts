@@ -74,7 +74,9 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
   // Get criteria from subjectData
   const currentSubject = subjectData.find((s) => s.Materia === subject);
   const criteria = {
-    proportions: currentSubject!["Proporci\u00F3n TPS/Nota"],
+    proportion:
+      parseInt(currentSubject!["Proporci\u00F3n TPS/Nota"].replace("%", "")) /
+      100,
     specialActivities: currentSubject!["Actividades Especiales"]
       .split(",")
       .map((a) => a.trim()),
