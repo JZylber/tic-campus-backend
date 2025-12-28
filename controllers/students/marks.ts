@@ -81,37 +81,41 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       .split(",")
       .map((a) => a.trim()),
   };
-  // Get all content Ids that belong to this subject
-  const subjectContentIds = contentsData
+  // Get all content Ids and names that belong to this subject
+  const subjectContent = contentsData
     .filter((c) => c.Materia === subject)
-    .map((c) => c.Id);
+    .map((c) => ({ Id: c.Id, Nombre: c.Nombre }));
   // Convert activitiesData to ClassActivity[]. Filter by subjectContentIds.
   const classActivities: ClassActivity[] = activitiesData
     .map((activity) => ({
       studentId: activity["Id Estudiante"],
-      name: activity.Nombre,
+      name: activity["Nombre Actividad"],
       id: activity["Id Actividad"],
       comment: activity.Aclaración,
       done: activity.Realizada.toLowerCase() === "true",
       visible: activity.Visible.toLowerCase() === "true",
     }))
-    .filter((activity) => subjectContentIds.includes(activity.id));
+    .filter((activity) =>
+      subjectContent.some((content) => content.Id === activity.id)
+    );
   // Convert marksData to MarkedActivity[]. Filter by subjectContentIds.
   const markedActivities: MarkedActivity[] = marksData
     .map((mark) => ({
       studentId: mark["Id Estudiante"],
-      name: mark.Nombre,
+      name: mark["Nombre Actividad"],
       id: mark["Id Actividad"],
       comment: mark.Aclaración,
       mark: parseFloat(mark.Nota.replace(",", ".")),
       visible: mark.Visible.toLowerCase() === "true",
     }))
-    .filter((activity) => subjectContentIds.includes(activity.id));
+    .filter((activity) =>
+      subjectContent.some((content) => content.Id === activity.id)
+    );
   // Convert redosData to RedoActivity[]. Filter by subjectContentIds.
   const redoActivities: RedoActivity[] = redosData
     .map((redo) => ({
       studentId: redo["Id Estudiante"],
-      name: redo.Nombre,
+      name: redo["Nombre Recuperatorio"],
       id: redo.Id,
       comment: redo.Aclaración,
       mark: parseFloat(redo.Nota.replace(",", ".")),
@@ -119,7 +123,9 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       visible: redo.Visible.toLowerCase() === "true",
     }))
     .filter((activity) =>
-      activity.coveredActivities.every((id) => subjectContentIds.includes(id))
+      activity.coveredActivities.every((id) =>
+        subjectContent.some((content) => content.Id === id)
+      )
     );
   return { classActivities, markedActivities, redoActivities, criteria };
 }
