@@ -1,30 +1,12 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
 import { asTableData } from "../shared.ts";
-
-type CourseTable = Array<{
-  Id: string;
-  Nombre: string;
-  "Link Grupo"?: string;
-  Materia: string;
-}>;
-
-type SubjectTable = Array<{
-  Id: string;
-  Materia: string;
-  Presentación: string;
-  "Reentrega Actividades": string;
-  "Reentrega TPs": string;
-  "Proporción TPS/Nota": string;
-  "Actividades Especiales": string;
-}>;
-
-type SubjectXCourseTable = Array<{
-  Id: string;
-  Curso: string;
-  "Link Grupo": string;
-  Materia: string;
-}>;
+import type {
+  CourseTable,
+  StudentCourseTable,
+  SubjectTable,
+  SubjectXCourseTable,
+} from "../subjectSchema.ts";
 
 export async function getHomeLinks(
   request: Request<{ subject: string; course: string; year: string }>,

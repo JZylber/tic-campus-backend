@@ -1,17 +1,7 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
 import { asTableData } from "../shared.ts";
-
-type MaterialTable = Array<{
-  Id: string;
-  Materia: string;
-  Nombre: string;
-  Imagen: string;
-  Descripción: string;
-  Link: string;
-  Tipo: string;
-  Visible: string;
-}>;
+import type { MaterialTable } from "../subjectSchema.ts";
 
 type Material = {
   name: string;

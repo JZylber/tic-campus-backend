@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
 import { asTableData } from "../shared.ts";
+import type {
+  ContentsPerCourseTable,
+  ContentsTable,
+  UnitsTable,
+} from "../subjectSchema.ts";
 
 export enum ContentType {
   activity = "Actividad",
@@ -30,40 +35,6 @@ export type Unit = {
   order: number;
   contents: Array<Content>;
 };
-
-export type ContentsPerCourseTable = Array<{
-  Id: string;
-  "Id Contenido": string;
-  Nombre: string;
-  Contenido: string;
-  CursoXMateria: string;
-  Curso: string;
-  Materia: string;
-  Visible: string;
-  "En Curso": string;
-  Opcional: string;
-  Entrega: string;
-  Repositorio: string;
-  Tutor: string;
-}>;
-
-export type ContentsTable = Array<{
-  Id: string;
-  Tipo: string;
-  Nombre: string;
-  Tema: string;
-  Unidad: string;
-  Materia: string;
-  Texto: string;
-  Imagen: string;
-}>;
-
-export type UnitsTable = Array<{
-  Id: string;
-  "Id Materia": string;
-  Nombre: string;
-  Orden: string;
-}>;
 
 export async function getSubjectArticles(
   request: Request<
