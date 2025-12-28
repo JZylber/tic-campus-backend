@@ -6,6 +6,7 @@ import cors from "cors";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 import { getTemplateSubjects } from "./controllers/subjects/allSubjects.ts";
 import { getSubjectMaterials } from "./controllers/subjects/material.ts";
+import { getAllStudents } from "./controllers/students/allStudents.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use(cors());
 
 // Students
+app.get("/students", getAllStudents);
 app.post("/student", getStudentData);
 
 // Subjects

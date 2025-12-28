@@ -46,7 +46,7 @@ export async function getStudentData(
   )?.[4];
   // IF year is 2025, use DNI as student ID
   if (year === 2025) {
-    studentId = possibleStudents[0]!.item.dni;
+    studentId = possibleStudents[0]!.item.dni.toString();
   }
   return response.status(200).send({ id: studentId, course: currentCourse });
 }
