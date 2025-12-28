@@ -40,9 +40,31 @@ export type MarksTable = Array<{
   Visible: string;
 }>;
 
-export type RedosTable = Array<{}>;
+export type RedosTable = Array<{
+  Id: string;
+  "Id Estudiante": string;
+  "Id Actividad": string;
+  "Nombre Recuperatorio": string;
+  Nombre: string;
+  Apellido: string;
+  Curso: string;
+  Nota: string;
+  Aclaración: string;
+  Visible: string;
+}>;
 
-export type RedoRequestsTable = Array<{}>;
+export type RedoRequestsTable = Array<{
+  "Id Actividad": string;
+  Revisado: string;
+  "Marca temporal": string;
+  "Dirección de correo electrónico": string;
+  Curso: string;
+  Integrantes: string;
+  "Trabajo a reentregar": string;
+  "Razón de reentrega": string;
+  "Si en esta entrega agregaron extras, ¿Cuáles?": string;
+  "Aclaraciones finales: Cualquier comentario o aclaración que tenga que saber al corregir su trabajo": string;
+}>;
 
 export type ContentsPerCourseTable = Array<{
   Id: string;

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { getSheetClient } from "../../connectors/google.ts";
 import { asTableData } from "../shared.ts";
-import type { StudentCourseTable, StudentTable } from "../types.ts";
+import type { StudentCourseTable, StudentTable } from "../subjectSchema.ts";
 
 type Student = {
   id: string;

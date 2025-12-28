@@ -10,6 +10,7 @@ import {
 } from "./controllers/subjects/allSubjects.ts";
 import { getSubjectMaterials } from "./controllers/subjects/material.ts";
 import { getAllStudents } from "./controllers/students/allStudents.ts";
+import { getStudentMarks } from "./controllers/students/marks.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -25,6 +26,7 @@ app.use(cors());
 // Students
 app.get("/students", getAllStudents);
 app.post("/student", getStudentData);
+app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
