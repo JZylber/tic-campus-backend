@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 
-import { getSheetClient } from "../connectors/google.ts";
+import { getSheetClient } from "../../connectors/google.ts";
 import Fuse from "fuse.js";
-import { getColumnIndex } from "./shared.ts";
+import { getColumnIndex } from "../shared.ts";
 
 export async function getStudentData(
   request: Request<{}, {}, { name: string; surname: string; year: number }>,

@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { getStudentData } from "./controllers/students.ts";
+import { getStudentData } from "./controllers/students/auth.ts";
 import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
