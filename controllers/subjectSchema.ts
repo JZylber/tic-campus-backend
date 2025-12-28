@@ -53,6 +53,18 @@ export type RedosTable = Array<{
   Visible: string;
 }>;
 
+export type FixedMarksTable = Array<{
+  Id: string;
+  "Id Estudiante": string;
+  Materia: string;
+  Nombre: string;
+  Apellido: string;
+  Curso: string;
+  Tipo: string;
+  Valor: string;
+  Visible: string;
+}>;
+
 export type RedoRequestsTable = Array<{
   "Id Actividad": string;
   Revisado: string;

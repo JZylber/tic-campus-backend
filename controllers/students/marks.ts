@@ -8,6 +8,7 @@ import type {
   SubjectTable,
   ContentsTable,
   RedoRequestsTable,
+  FixedMarksTable,
 } from "../subjectSchema.ts";
 
 interface Activity {
@@ -29,6 +30,11 @@ interface MarkedActivity extends Activity {
 interface RedoActivity extends MarkedActivity {
   coveredActivities: string[];
 }
+
+type FixedMarks = Record<
+  string,
+  { value: string; observation?: string; suggestion?: string } | undefined
+>;
 
 async function getMarksAndCriteria(subject: string, dataSheetId: string) {
   const sheets = await getSheetClient();
@@ -232,4 +238,53 @@ export async function getRevisionRequests(
     (request) => request["Id Actividad"]
   );
   return response.status(200).send(pendingRequestIds);
+}
+
+export async function getStudentFixedMarks(
+  request: Request<
+    { subject: string; course: string; year: string; id: string },
+    {},
+    {},
+    { dataSheetId?: string }
+  >,
+  response: Response
+) {
+  // Get parameters from request parameters
+  const { subject, course, year, id } = request.params;
+  let spreadsheetId = request.query.dataSheetId || "";
+  if (!spreadsheetId) {
+    try {
+      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+    } catch (error) {
+      return response.status(404).send({ error: (error as Error).message });
+    }
+  }
+  const sheets = await getSheetClient();
+  // Fetch Fixed Marks
+  const fixedMarksRes = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: "Notas Fijas!A:H",
+  });
+  const fixedMarksData = asTableData(
+    fixedMarksRes.data.values!
+  ) as FixedMarksTable;
+  // Filter fixed marks by student ID and subject if subject in data is not undefined, else do not filter by subject
+  const studentFixedMarks = fixedMarksData.filter(
+    (mark) =>
+      mark["Id Estudiante"] === id &&
+      (mark.Materia === subject || !mark.Materia) &&
+      mark.Visible.toLowerCase() === "true"
+  );
+  // Map as Tipo: {value: Valor, observation: , suggestion: }
+  const fixedMarks: FixedMarks = {};
+  studentFixedMarks.forEach((mark) => {
+    // Some marks are Valor - Observación - Sugerencia
+    const valorParts = mark.Valor.split(" - ").map((part) => part.trim());
+    fixedMarks[mark.Tipo] = {
+      value: valorParts[0]!,
+      observation: valorParts[1] || "",
+      suggestion: valorParts[2] || "",
+    };
+  });
+  return response.status(200).send(fixedMarks);
 }
