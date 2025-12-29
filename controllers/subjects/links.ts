@@ -21,18 +21,13 @@ export async function getHomeLinks(
     return response.status(404).send({ error: (error as Error).message });
   }
   const sheets = await getSheetClient();
-  const [courseTable, subjectTable] = await Promise.all([
-    sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "Curso!A:D",
-    }),
-    sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "Materia!A:G",
-    }),
-  ]);
-  const courseData = asTableData(courseTable.data.values!) as CourseTable;
-  const subjectData = asTableData(subjectTable.data.values!) as SubjectTable;
+  const APIrequest = await sheets.spreadsheets.values.batchGet({
+    spreadsheetId,
+    ranges: ["Curso!A:D", "Materia!A:G"],
+  });
+  const [courseTable, subjectTable] = APIrequest.data.valueRanges!;
+  const courseData = asTableData(courseTable!.values!) as CourseTable;
+  const subjectData = asTableData(subjectTable!.values!) as SubjectTable;
   // Presentation link from subject data
   const presentationLink = subjectData.find(
     (s) => s.Materia === subject

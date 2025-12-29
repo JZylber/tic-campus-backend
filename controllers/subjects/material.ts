@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
-import { asTableData } from "../shared.ts";
+import { asTableData, setCacheHeaders } from "../shared.ts";
 import type { MaterialTable } from "../subjectSchema.ts";
 
 type Material = {
@@ -48,5 +48,7 @@ export async function getSubjectMaterials(
     description: row.Descripción,
     type: row.Tipo,
   }));
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 200 seconds
+  setCacheHeaders(response, 200);
   return response.status(200).send(materials);
 }

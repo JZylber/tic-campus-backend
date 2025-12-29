@@ -1,3 +1,5 @@
+import type { Response } from "express";
+
 export function getColumnIndex(columnName: string, headers: string[]): number {
   const index = headers.indexOf(columnName);
   if (index === -1) {
@@ -18,4 +20,12 @@ export function asTableData(
     });
     return obj;
   });
+}
+
+export function setCacheHeaders(response: Response, durationInSeconds: number) {
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to duration
+  const cacheValue = `public, max-age=${durationInSeconds}, s-maxage=${durationInSeconds}, stale-while-revalidate=${durationInSeconds}`;
+  response.setHeader("Cache-Control", cacheValue);
+  response.setHeader("CDN-Cache-Control", cacheValue);
+  response.setHeader("Vercel-CDN-Cache-Control", cacheValue);
 }

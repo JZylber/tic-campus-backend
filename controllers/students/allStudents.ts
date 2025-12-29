@@ -15,21 +15,14 @@ type Student = {
 
 export async function getAllStudents(request: Request, response: Response) {
   const sheetsAPI = await getSheetClient();
-  const studentsPromise = sheetsAPI.spreadsheets.values.get({
+  const APIrequest = await sheetsAPI.spreadsheets.values.batchGet({
     spreadsheetId: process.env.MAIN_SPREADSHEET_ID!,
-    range: "Estudiantes!A:E",
+    ranges: ["Estudiantes!A:E", "EstudianteXCurso!A:E"],
   });
-  const studentsCoursePromise = sheetsAPI.spreadsheets.values.get({
-    spreadsheetId: process.env.MAIN_SPREADSHEET_ID!,
-    range: "EstudianteXCurso!A:E",
-  });
-  const [studentsRes, studentsCourseRes] = await Promise.all([
-    studentsPromise,
-    studentsCoursePromise,
-  ]);
-  const studentsData = asTableData(studentsRes.data.values!) as StudentTable;
+  const [studentsRes, studentsCourseRes] = APIrequest.data.valueRanges!;
+  const studentsData = asTableData(studentsRes!.values!) as StudentTable;
   const studentsCourseData = asTableData(
-    studentsCourseRes.data.values!
+    studentsCourseRes!.values!
   ) as StudentCourseTable;
   // Merge studentsData into studentsCourseData on Id field as Student
   const students: Student[] = studentsCourseData.map((courseRow) => {
