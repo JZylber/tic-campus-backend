@@ -1,3 +1,12 @@
+export type AllSubjectsTable = Array<{
+  Materia: string;
+  Curso: string;
+  Año: string;
+  "Spreadsheet ID": string;
+  "Id Template": string;
+  Notas: string;
+}>;
+
 export type StudentTable = Array<{
   Id: string;
   DNI: string;
