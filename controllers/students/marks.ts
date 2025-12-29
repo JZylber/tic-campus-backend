@@ -267,5 +267,7 @@ export async function getStudentFixedMarks(
       suggestion: valorParts[2] || "",
     };
   });
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to an hour
+  setCacheHeaders(response, 3600);
   return response.status(200).send(fixedMarks);
 }
