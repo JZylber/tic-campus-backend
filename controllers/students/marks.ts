@@ -31,9 +31,23 @@ interface RedoActivity extends MarkedActivity {
   coveredActivities: string[];
 }
 
+type FixedMarkRecord = {
+  studentId: string;
+  type: string;
+  mark: string;
+  observation?: string;
+  suggestion?: string;
+  visible: boolean;
+};
+
 type FixedMarks = Record<
   string,
-  { mark: string; observation?: string; suggestion?: string } | undefined
+  | {
+      mark: string;
+      observation: string | undefined;
+      suggestion: string | undefined;
+    }
+  | undefined
 >;
 
 async function getMarksAndCriteria(subject: string, dataSheetId: string) {
@@ -46,15 +60,23 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       "Recuperatorio!A:J",
       "Materia!A:G",
       "Contenidos!A:H",
+      "Notas Fijas!A:H",
     ],
   });
-  const [marksRes, activitiesRes, redosRes, subjectRes, contentsRes] =
-    APIrequest.data.valueRanges!;
+  const [
+    marksRes,
+    activitiesRes,
+    redosRes,
+    subjectRes,
+    contentsRes,
+    fixedMarksRes,
+  ] = APIrequest.data.valueRanges!;
   const marksData = asTableData(marksRes!.values!) as MarksTable;
   const activitiesData = asTableData(activitiesRes!.values!) as ActivitiesTable;
   const redosData = asTableData(redosRes!.values!) as RedosTable;
   const subjectData = asTableData(subjectRes!.values!) as SubjectTable;
   const contentsData = asTableData(contentsRes!.values!) as ContentsTable;
+  const fixedMarksData = asTableData(fixedMarksRes!.values!) as FixedMarksTable;
   // Get criteria from subjectData
   const currentSubject = subjectData.find((s) => s.Materia === subject);
   const criteria = {
@@ -113,7 +135,31 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
         subjectContent.some((content) => content.Id === id)
       )
     );
-  return { classActivities, markedActivities, redoActivities, criteria };
+  // Get fixed marks for the subject
+  const subjectFixedMarks = fixedMarksData.filter(
+    (mark) => mark.Materia === subject || !mark.Materia
+  );
+  // Some marks are Nota - Observación - Sugerencia
+  const fixedMarks: FixedMarkRecord[] = subjectFixedMarks.map((mark) => {
+    const valorParts = mark.Valor?.split(" - ").map((part) => part.trim()) || [
+      "",
+    ];
+    return {
+      studentId: mark["Id Estudiante"],
+      type: mark.Tipo,
+      mark: valorParts[0]!,
+      observation: valorParts[1] || "",
+      suggestion: valorParts[2] || "",
+      visible: mark.Visible.toLowerCase() === "true",
+    };
+  });
+  return {
+    classActivities,
+    markedActivities,
+    redoActivities,
+    criteria,
+    fixedMarks,
+  };
 }
 
 export async function getStudentMarks(
@@ -135,8 +181,13 @@ export async function getStudentMarks(
       return response.status(404).send({ error: (error as Error).message });
     }
   }
-  const { classActivities, markedActivities, redoActivities, criteria } =
-    await getMarksAndCriteria(subject, spreadsheetId);
+  const {
+    classActivities,
+    markedActivities,
+    redoActivities,
+    criteria,
+    fixedMarks,
+  } = await getMarksAndCriteria(subject, spreadsheetId);
   // Filter activities by student ID and visibility
   const studentClassActivities = classActivities.filter(
     (activity) => activity.studentId === id && activity.visible
@@ -147,6 +198,16 @@ export async function getStudentMarks(
   const studentRedoActivities = redoActivities.filter(
     (activity) => activity.studentId === id && activity.visible
   );
+  const studentFixedMarks: FixedMarks = {};
+  fixedMarks
+    .filter((mark) => mark.studentId === id && mark.visible)
+    .forEach((mark) => {
+      studentFixedMarks[mark.type] = {
+        mark: mark.mark,
+        observation: mark.observation,
+        suggestion: mark.suggestion,
+      };
+    });
   // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
   setCacheHeaders(response, 100);
   return response.status(200).send({
@@ -154,6 +215,7 @@ export async function getStudentMarks(
     markedActivities: studentMarkedActivities,
     redoActivities: studentRedoActivities,
     criteria,
+    fixedMarks: studentFixedMarks,
   });
 }
 
@@ -221,55 +283,4 @@ export async function getRevisionRequests(
   // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
   setCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
-}
-
-export async function getStudentFixedMarks(
-  request: Request<
-    { subject: string; course: string; year: string; id: string },
-    {},
-    {},
-    { dataSheetId?: string }
-  >,
-  response: Response
-) {
-  // Get parameters from request parameters
-  const { subject, course, year, id } = request.params;
-  let spreadsheetId = request.query.dataSheetId || "";
-  if (!spreadsheetId) {
-    try {
-      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
-    } catch (error) {
-      return response.status(404).send({ error: (error as Error).message });
-    }
-  }
-  const sheets = await getSheetClient();
-  // Fetch Fixed Marks
-  const fixedMarksRes = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "Notas Fijas!A:H",
-  });
-  const fixedMarksData = asTableData(
-    fixedMarksRes.data.values!
-  ) as FixedMarksTable;
-  // Filter fixed marks by student ID and subject if subject in data is not undefined, else do not filter by subject
-  const studentFixedMarks = fixedMarksData.filter(
-    (mark) =>
-      mark["Id Estudiante"] === id &&
-      (mark.Materia === subject || !mark.Materia) &&
-      mark.Visible.toLowerCase() === "true"
-  );
-  // Map as Tipo: {value: Valor, observation: , suggestion: }
-  const fixedMarks: FixedMarks = {};
-  studentFixedMarks.forEach((mark) => {
-    // Some marks are Nota - Observación - Sugerencia
-    const valorParts = mark.Valor.split(" - ").map((part) => part.trim());
-    fixedMarks[mark.Tipo] = {
-      mark: valorParts[0]!,
-      observation: valorParts[1] || "",
-      suggestion: valorParts[2] || "",
-    };
-  });
-  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to an hour
-  setCacheHeaders(response, 3600);
-  return response.status(200).send(fixedMarks);
 }
