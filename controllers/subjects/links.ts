@@ -3,7 +3,6 @@ import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
 import { asTableData } from "../shared.ts";
 import type {
   CourseTable,
-  StudentCourseTable,
   SubjectTable,
   SubjectXCourseTable,
 } from "../subjectSchema.ts";
