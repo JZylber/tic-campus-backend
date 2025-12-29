@@ -27,6 +27,10 @@ app.use(express.json());
 
 app.use(cors());
 
+app.get("/", (req, res) => {
+  res.send("TIC Campus Backend is running.");
+});
+
 // Students
 app.get("/students", getAllStudents);
 app.post("/student", getStudentData);
