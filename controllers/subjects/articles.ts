@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
-import { asTableData } from "../shared.ts";
+import { asTableData, setCacheHeaders } from "../shared.ts";
 import type {
   ContentsPerCourseTable,
   ContentsTable,
@@ -56,22 +56,16 @@ export async function getSubjectArticles(
     }
   }
   const sheets = await getSheetClient();
-  const unitsPromise = sheets.spreadsheets.values.get({
+  const APIrequest = await sheets.spreadsheets.values.batchGet({
     spreadsheetId,
-    range: "Unidades!A:D",
+    ranges: ["Unidades!A:D", "Contenidos!A:H", "ContenidosXCurso!A:L"],
   });
-  const contentsPromise = sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "Contenidos!A:H",
-  });
-  const contentsPerCoursePromise = sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "ContenidosXCurso!A:L",
-  });
+  const [unitsPromise, contentsPromise, contentsPerCoursePromise] =
+    APIrequest.data.valueRanges!;
   // Map responses with asTableData function
   const [unitsRes, contentsRes, contentsPerCourseRes] = (
     await Promise.all([unitsPromise, contentsPromise, contentsPerCoursePromise])
-  ).map((res) => asTableData(res.data.values!));
+  ).map((res) => asTableData(res!.values!));
   // Type the mapped responses
   const units = unitsRes as UnitsTable;
   const contents = contentsRes as ContentsTable;
@@ -126,5 +120,7 @@ export async function getSubjectArticles(
   );
   // Sort units by order
   subjectUnits.sort((a, b) => a.order - b.order);
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
+  setCacheHeaders(response, 100);
   return response.status(200).send(subjectUnits);
 }

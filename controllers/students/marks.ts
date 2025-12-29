@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
-import { asTableData } from "../shared.ts";
+import { asTableData, setCacheHeaders } from "../shared.ts";
 import type {
   MarksTable,
   ActivitiesTable,
@@ -38,46 +38,23 @@ type FixedMarks = Record<
 
 async function getMarksAndCriteria(subject: string, dataSheetId: string) {
   const sheets = await getSheetClient();
-  // Fetch Marks
-  const marksPromise = sheets.spreadsheets.values.get({
+  const APIrequest = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: dataSheetId,
-    range: "Nota!A:J",
-  });
-  // Fetch Activitites
-  const activitiesPromise = sheets.spreadsheets.values.get({
-    spreadsheetId: dataSheetId,
-    range: "Actividad!A:J",
-  });
-  // Fetch Redos
-  const redosPromise = sheets.spreadsheets.values.get({
-    spreadsheetId: dataSheetId,
-    range: "Recuperatorio!A:J",
-  });
-  // Fetch Criteria
-  const subjectPromise = sheets.spreadsheets.values.get({
-    spreadsheetId: dataSheetId,
-    range: "Materia!A:G",
-  });
-  // Fetch Activities
-  const contentsPromise = sheets.spreadsheets.values.get({
-    spreadsheetId: dataSheetId,
-    range: "Contenidos!A:H",
+    ranges: [
+      "Nota!A:J",
+      "Actividad!A:J",
+      "Recuperatorio!A:J",
+      "Materia!A:G",
+      "Contenidos!A:H",
+    ],
   });
   const [marksRes, activitiesRes, redosRes, subjectRes, contentsRes] =
-    await Promise.all([
-      marksPromise,
-      activitiesPromise,
-      redosPromise,
-      subjectPromise,
-      contentsPromise,
-    ]);
-  const marksData = asTableData(marksRes.data.values!) as MarksTable;
-  const activitiesData = asTableData(
-    activitiesRes.data.values!
-  ) as ActivitiesTable;
-  const redosData = asTableData(redosRes.data.values!) as RedosTable;
-  const subjectData = asTableData(subjectRes.data.values!) as SubjectTable;
-  const contentsData = asTableData(contentsRes.data.values!) as ContentsTable;
+    APIrequest.data.valueRanges!;
+  const marksData = asTableData(marksRes!.values!) as MarksTable;
+  const activitiesData = asTableData(activitiesRes!.values!) as ActivitiesTable;
+  const redosData = asTableData(redosRes!.values!) as RedosTable;
+  const subjectData = asTableData(subjectRes!.values!) as SubjectTable;
+  const contentsData = asTableData(contentsRes!.values!) as ContentsTable;
   // Get criteria from subjectData
   const currentSubject = subjectData.find((s) => s.Materia === subject);
   const criteria = {
@@ -168,6 +145,8 @@ export async function getStudentMarks(
   const studentRedoActivities = redoActivities.filter(
     (activity) => activity.studentId === id && activity.visible
   );
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
+  setCacheHeaders(response, 100);
   return response.status(200).send({
     classActivities: studentClassActivities,
     markedActivities: studentMarkedActivities,
@@ -237,6 +216,8 @@ export async function getRevisionRequests(
   const pendingRequestIds = pendingRequests.map(
     (request) => request["Id Actividad"]
   );
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
+  setCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
 }
 
