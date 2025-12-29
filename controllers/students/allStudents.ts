@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { getSheetClient } from "../../connectors/google.ts";
-import { asTableData } from "../shared.ts";
+import { asTableData, setCacheHeaders } from "../shared.ts";
 import type { StudentCourseTable, StudentTable } from "../subjectSchema.ts";
 
 type Student = {
@@ -43,5 +43,7 @@ export async function getAllStudents(request: Request, response: Response) {
       course: courseRow.Curso,
     };
   });
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 1 hour
+  setCacheHeaders(response, 3600);
   return response.status(200).send(students);
 }
