@@ -62,8 +62,10 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       parseInt(currentSubject!["Proporci\u00F3n TPS/Nota"].replace("%", "")) /
       100,
     specialActivities: currentSubject!["Actividades Especiales"]
-      .split(",")
-      .map((a) => a.trim()),
+      ? currentSubject!["Actividades Especiales"]
+          .split(",")
+          .map((a) => a.trim())
+      : [],
   };
   // Get all content Ids and names that belong to this subject
   const subjectContent = contentsData
