@@ -9,7 +9,7 @@ import type {
 
 export async function getHomeLinks(
   request: Request<{ subject: string; course: string; year: string }>,
-  response: Response
+  response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
@@ -29,7 +29,7 @@ export async function getHomeLinks(
   const subjectData = asTableData(subjectTable!.values!) as SubjectTable;
   // Presentation link from subject data
   const presentationLink = subjectData.find(
-    (s) => s.Materia === subject
+    (s) => s.Materia === subject,
   )?.Presentación;
   let groupLink = "";
   // Check if multicourse by checking if "Link Grupo" exists in courseData
@@ -41,14 +41,16 @@ export async function getHomeLinks(
       range: "MateriaXCurso!A:D",
     });
     const subjectXCourseData = asTableData(
-      subjectXCourseTable.data.values!
+      subjectXCourseTable.data.values!,
     ) as SubjectXCourseTable;
     groupLink = subjectXCourseData.find(
-      (sc) => sc.Materia === subject && sc.Curso === course
+      (sc) => sc.Materia === subject && sc.Curso === course,
     )?.["Link Grupo"]!;
   } else {
-    // Get group link from course data
-    groupLink = courseData.find((c) => c.Materia === subject)?.["Link Grupo"]!;
+    // Get group link from course data. Materia is the same as subject in course data, and the last two letters of course is the "Nombre" column in course data
+    groupLink = courseData.find(
+      (c) => c.Materia === subject && c.Nombre === course.slice(-2),
+    )?.["Link Grupo"]!;
   }
   return response
     .status(200)
@@ -57,7 +59,7 @@ export async function getHomeLinks(
 
 export async function getRedoLinks(
   request: Request<{ subject: string; course: string; year: string }>,
-  response: Response
+  response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
