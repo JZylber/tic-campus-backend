@@ -22,7 +22,7 @@
     "express": "^5.1.0",
     "fuse.js": "^7.1.0",
     "googleapis": "^105.0.0",
-    "vercel": "^50.1.2"
+    "vercel": "^50.13.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
