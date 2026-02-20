@@ -7,13 +7,15 @@ import type {
   UnitsTable,
 } from "../subjectSchema.ts";
 
-export enum ContentType {
-  activity = "Actividad",
-  material = "Material",
-  finalActivity = "Trabajo Práctico",
-  survey = "Encuesta",
-  makeup = "Recuperatorio",
-}
+const ContentType = {
+  activity: "Actividad",
+  material: "Material",
+  finalActivity: "Trabajo Práctico",
+  survey: "Encuesta",
+  makeup: "Recuperatorio",
+};
+
+export type ContentType = (typeof ContentType)[keyof typeof ContentType];
 
 export type Content = {
   id: string;
@@ -43,7 +45,7 @@ export async function getSubjectArticles(
     {},
     { dataSheetId?: string }
   >,
-  response: Response
+  response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
@@ -75,14 +77,14 @@ export async function getSubjectArticles(
     (content) =>
       content.Visible === "TRUE" &&
       content.Curso === course &&
-      (!content.Materia || content.Materia === subject)
+      (!content.Materia || content.Materia === subject),
   );
   // Build an array of units by reducing the visible contents
   const subjectUnits: Array<Unit> = visibleSubjectContents.reduce(
     (unitsAcc, contentPerCourse) => {
       // Find the content details
       const contentDetails = contents.find(
-        (content) => content.Id === contentPerCourse["Id Contenido"]
+        (content) => content.Id === contentPerCourse["Id Contenido"],
       );
       if (!contentDetails) return unitsAcc;
       // Find if the unit already exists in the accumulator
@@ -90,7 +92,7 @@ export async function getSubjectArticles(
       // If not, create it and add to the accumulator
       if (!unit) {
         const unitDetails = units.find(
-          (u) => u.Nombre === contentDetails.Unidad
+          (u) => u.Nombre === contentDetails.Unidad,
         );
         unit = {
           name: contentDetails.Unidad,
@@ -116,7 +118,7 @@ export async function getSubjectArticles(
       });
       return unitsAcc;
     },
-    [] as Array<Unit>
+    [] as Array<Unit>,
   );
   // Sort units by order
   subjectUnits.sort((a, b) => a.order - b.order);
