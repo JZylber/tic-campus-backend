@@ -2,6 +2,7 @@ import process from "node:process";
 import { google } from "googleapis";
 import { promises as fs } from "fs";
 import path from "path";
+import { prisma } from "../index.ts";
 
 interface SpreadsheetIdInformation {
   subject: string;
@@ -24,7 +25,7 @@ export async function setGoogleCredentials() {
       // Decode the base64 credentials
       const credentialsJson = Buffer.from(
         process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
-        "base64"
+        "base64",
       ).toString("utf-8");
 
       // Ensure the /tmp directory exists
@@ -55,39 +56,25 @@ export async function getSheetClient() {
   return sheets;
 }
 
-async function getSpreadsheetIds() {
-  const sheets = await getSheetClient();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: process.env.MAIN_SPREADSHEET_ID!,
-    range: "Datos!A:D",
-  });
-  let spreadsheetIds: SpreadsheetIdInformation[] = res.data.values?.map(
-    (row) => ({
-      subject: row[0],
-      course: row[1],
-      year: Number(row[2]),
-      spreadsheetId: row[3],
-    })
-  ) as SpreadsheetIdInformation[];
-  return spreadsheetIds;
-}
-
 export async function getSpreadsheetId(
   subject: string,
   course: string,
-  year: number
+  year: number,
 ) {
-  let spreadsheetIds = await getSpreadsheetIds();
-  // Find the spreadsheet ID in the cached list.
-  let info = spreadsheetIds.find(
-    (info) =>
-      info.subject === subject && info.course === course && info.year === year
-  );
-  // Throw an error if not found.
-  if (!info) {
+  const spreadsheetId = await prisma.subject.findFirst({
+    where: {
+      name: subject,
+      course,
+      year,
+    },
+    select: {
+      spreadsheet: true,
+    },
+  });
+  if (!spreadsheetId || !spreadsheetId.spreadsheet) {
     throw new Error(
-      `Spreadsheet ID not found for ${subject} - ${course} - ${year}`
+      "Spreadsheet ID not found for the given subject, course and year",
     );
   }
-  return info.spreadsheetId;
+  return spreadsheetId.spreadsheet;
 }
