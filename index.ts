@@ -16,6 +16,7 @@ import {
 } from "./controllers/students/marks.ts";
 import { PrismaClient } from "./generated/prisma/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
+import passport from "./connectors/passport-config.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -26,6 +27,7 @@ const adapter = new PrismaPg({ connectionString });
 export const prisma = new PrismaClient({ adapter }); // Prisma Client
 
 const app = express();
+app.use(passport.initialize());
 
 const PORT = process.env.PORT;
 
