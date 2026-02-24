@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { prisma } from "../../index.ts";
+import prisma from "../../prisma/prisma.ts";
 import { setCacheHeaders } from "../shared.ts";
 
 type Student = {
