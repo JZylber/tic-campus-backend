@@ -143,3 +143,7 @@ vite.config.ts.timestamp-*
 #OAuth
 credentials.json
 .vercel
+
+/generated/prisma
+# Local db population file
+aux.ts

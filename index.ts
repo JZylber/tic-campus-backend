@@ -14,9 +14,16 @@ import {
   getRevisionRequests,
   getStudentMarks,
 } from "./controllers/students/marks.ts";
+import { PrismaClient } from "./generated/prisma/client.ts";
+import { PrismaPg } from "@prisma/adapter-pg";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
+
+const connectionString = `${process.env.DATABASE_URL}`;
+
+const adapter = new PrismaPg({ connectionString });
+export const prisma = new PrismaClient({ adapter }); // Prisma Client
 
 const app = express();
 
