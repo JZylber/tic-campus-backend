@@ -2,7 +2,7 @@ import process from "node:process";
 import { google } from "googleapis";
 import { promises as fs } from "fs";
 import path from "path";
-import { prisma } from "../index.ts";
+import prisma from "../prisma/prisma.ts";
 
 interface SpreadsheetIdInformation {
   subject: string;
