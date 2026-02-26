@@ -32,9 +32,10 @@ export async function getAllSubjects(request: Request, response: Response) {
   const subjects: Subject[] = subjectsQuery.map((subject) => ({
     name: subject.name,
     course: subject.course,
-    level: Number(subject.course.match(/\d+/)?.[0] || 0),
-    division: subject.course.match(/\d+([A-Za-z]*)/)?.[1] || "",
+    level: Number(subject.course[2] || 0),
+    division: subject.course[3] || "",
     year: subject.year,
+    spreadsheetId: subject.spreadsheet,
   }));
   return response.status(200).send(subjects);
 }
