@@ -35,6 +35,7 @@ export async function getAllSubjects(request: Request, response: Response) {
     level: Number(subject.course[2] || 0),
     division: subject.course[3] || "",
     year: subject.year,
+    template: subject.templateId,
     spreadsheetId: subject.spreadsheet,
   }));
   return response.status(200).send(subjects);
