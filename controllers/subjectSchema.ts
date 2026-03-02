@@ -155,3 +155,21 @@ export type MaterialTable = Array<{
   Tipo: string;
   Visible: string;
 }>;
+
+// Proyect
+export type ScheduleTable = Array<{
+  Materia: string;
+  TICurso: string;
+  Día: string;
+  Bloque: string;
+  Profe: string;
+  Ámbito: string;
+}>;
+
+export type EventTable = Array<{
+  Nombre: string;
+  Fecha: string;
+  Bloque: string;
+  Grupo: string;
+  Ámbito: string | undefined;
+}>;
