@@ -68,3 +68,35 @@ export async function getTemplateSubjects(
   });
   return response.status(200).send(subjectsQuery);
 }
+
+export async function getSubjectStudents(
+  request: Request<{ subject: string; course: string; year: string }>,
+  response: Response,
+) {
+  const { subject, course, year } = request.params;
+  const studentsQuery = await prisma.studentCourse.findMany({
+    where: {
+      course,
+      year: Number(year),
+      studentSubjects: {
+        some: {
+          subject: {
+            name: subject,
+          },
+        },
+      },
+    },
+    include: {
+      student: true,
+    },
+  });
+  // Map studentsQuery to an array of students with id, name, surname, year and course
+  const students = studentsQuery.map((studentCourse) => ({
+    id: studentCourse.student.id,
+    name: studentCourse.student.name,
+    surname: studentCourse.student.surname,
+    year: studentCourse.year,
+    course: studentCourse.course,
+  }));
+  return response.status(200).send(students);
+}
