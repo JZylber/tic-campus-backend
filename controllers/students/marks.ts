@@ -95,19 +95,31 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
     .map((c) => ({ Id: c.Id, Nombre: c.Nombre }));
   // Convert activitiesData to ClassActivity[]. Filter by subjectContentIds.
   const classActivities: ClassActivity[] = activitiesData
-    .map((activity) => ({
-      studentId: activity["Id Estudiante"],
-      name: activity["Nombre Actividad"],
-      id: activity["Id Actividad"],
-      comment: activity.Aclaración,
-      done: activity.Realizada.toLowerCase() === "true",
-      visible: activity.Visible.toLowerCase() === "true",
-    }))
+    .filter(
+      (activity) =>
+        activity["Id Estudiante"] !== "" && activity["Id Actividad"] !== "",
+    )
+    .map((activity) => {
+      return {
+        studentId: activity["Id Estudiante"],
+        name: activity["Nombre Actividad"],
+        id: activity["Id Actividad"],
+        comment: activity.Aclaración,
+        done: activity.Realizada.toLowerCase() === "true",
+        visible: activity.Visible.toLowerCase() === "true",
+      };
+    })
     .filter((activity) =>
-      subjectContent.some((content) => content.Id === activity.id)
+      subjectContent.some((content) => content.Id === activity.id),
     );
-  // Convert marksData to MarkedActivity[]. Filter by subjectContentIds.
+  // Convert marksData to MarkedActivity[]. Filter by subjectContentIds. Fi
   const markedActivities: MarkedActivity[] = marksData
+    .filter(
+      (mark) =>
+        mark["Id Estudiante"] !== "" &&
+        mark["Id Actividad"] !== "" &&
+        mark.Nota,
+    )
     .map((mark) => ({
       studentId: mark["Id Estudiante"],
       name: mark["Nombre Actividad"],
@@ -117,10 +129,13 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       visible: mark.Visible.toLowerCase() === "true",
     }))
     .filter((activity) =>
-      subjectContent.some((content) => content.Id === activity.id)
+      subjectContent.some((content) => content.Id === activity.id),
     );
   // Convert redosData to RedoActivity[]. Filter by subjectContentIds.
   const redoActivities: RedoActivity[] = redosData
+    .filter(
+      (redo) => redo["Id Estudiante"] !== "" && redo["Id Actividad"] !== "",
+    )
     .map((redo) => ({
       studentId: redo["Id Estudiante"],
       name: redo["Nombre Recuperatorio"],
@@ -132,12 +147,14 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
     }))
     .filter((activity) =>
       activity.coveredActivities.every((id) =>
-        subjectContent.some((content) => content.Id === id)
-      )
+        subjectContent.some((content) => content.Id === id),
+      ),
     );
   // Get fixed marks for the subject
   const subjectFixedMarks = fixedMarksData.filter(
-    (mark) => mark.Materia === subject || !mark.Materia
+    (mark) =>
+      mark.Materia === subject ||
+      (!mark.Materia && mark["Id Estudiante"] !== ""),
   );
   // Some marks are Nota - Observación - Sugerencia
   const fixedMarks: FixedMarkRecord[] = subjectFixedMarks.map((mark) => {
@@ -169,7 +186,7 @@ export async function getStudentMarks(
     {},
     { dataSheetId?: string }
   >,
-  response: Response
+  response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year, id } = request.params;
@@ -190,13 +207,13 @@ export async function getStudentMarks(
   } = await getMarksAndCriteria(subject, spreadsheetId);
   // Filter activities by student ID and visibility
   const studentClassActivities = classActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentMarkedActivities = markedActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentRedoActivities = redoActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentFixedMarks: FixedMarks = {};
   fixedMarks
@@ -226,7 +243,7 @@ export async function getRevisionRequests(
     {},
     { dataSheetId?: string; name?: string; surname?: string }
   >,
-  response: Response
+  response: Response,
 ) {
   const { subject, course, year } = request.params;
   const { name = "", surname = "", dataSheetId = "" } = request.query;
@@ -258,12 +275,12 @@ export async function getRevisionRequests(
   let redoRequestsData: RedoRequestsTable = [];
   if (redoRequestsRes.status === "fulfilled") {
     redoRequestsData = redoRequestsData.concat(
-      asTableData(redoRequestsRes.value.data.values!) as RedoRequestsTable
+      asTableData(redoRequestsRes.value.data.values!) as RedoRequestsTable,
     );
   }
   if (redoRequestsNRes.status === "fulfilled") {
     redoRequestsData = redoRequestsData.concat(
-      asTableData(redoRequestsNRes.value.data.values!) as RedoRequestsTable
+      asTableData(redoRequestsNRes.value.data.values!) as RedoRequestsTable,
     );
   }
   // Filter those requests that are not reviewed and match name and surname to any of the members in "Integrantes". Format of "Integrantes" is "Surname - Name, Surname - Name, ..."
@@ -271,14 +288,14 @@ export async function getRevisionRequests(
     if (request.Revisado.toLowerCase() === "true") return false;
     if (!name || !surname) return true;
     const integrantes = request.Integrantes.split(",").map((member) =>
-      member.trim().toLowerCase()
+      member.trim().toLowerCase(),
     );
     const fullName = `${surname} - ${name}`.toLowerCase();
     return integrantes.includes(fullName);
   });
   // Get only ids of pending requests
   const pendingRequestIds = pendingRequests.map(
-    (request) => request["Id Actividad"]
+    (request) => request["Id Actividad"],
   );
   // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
   setCacheHeaders(response, 100);
