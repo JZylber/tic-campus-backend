@@ -94,6 +94,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
     .filter((c) => c.Materia === subject)
     .map((c) => ({ Id: c.Id, Nombre: c.Nombre }));
   // Convert activitiesData to ClassActivity[]. Filter by subjectContentIds.
+  console.log("Activities data:", activitiesData);
   const classActivities: ClassActivity[] = activitiesData
     .filter(
       (activity) =>
@@ -105,14 +106,18 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
         name: activity["Nombre Actividad"],
         id: activity["Id Actividad"],
         comment: activity.Aclaración,
-        done: activity.Realizada.toLowerCase() === "true",
-        visible: activity.Visible.toLowerCase() === "true",
+        done: activity.Realizada
+          ? activity.Realizada.toLowerCase() === "true"
+          : false,
+        visible: activity.Visible
+          ? activity.Visible.toLowerCase() === "true"
+          : false,
       };
     })
     .filter((activity) =>
       subjectContent.some((content) => content.Id === activity.id),
     );
-  // Convert marksData to MarkedActivity[]. Filter by subjectContentIds. Fi
+  // Convert marksData to MarkedActivity[]. Filter by subjectContentIds.
   const markedActivities: MarkedActivity[] = marksData
     .filter(
       (mark) =>
@@ -126,7 +131,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       id: mark["Id Actividad"],
       comment: mark.Aclaración,
       mark: parseFloat(mark.Nota.replace(",", ".")),
-      visible: mark.Visible.toLowerCase() === "true",
+      visible: mark.Visible ? mark.Visible.toLowerCase() === "true" : false,
     }))
     .filter((activity) =>
       subjectContent.some((content) => content.Id === activity.id),
@@ -143,7 +148,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       comment: redo.Aclaración,
       mark: parseFloat(redo.Nota.replace(",", ".")),
       coveredActivities: redo["Id Actividad"].split(",").map((a) => a.trim()),
-      visible: redo.Visible.toLowerCase() === "true",
+      visible: redo.Visible ? redo.Visible.toLowerCase() === "true" : false,
     }))
     .filter((activity) =>
       activity.coveredActivities.every((id) =>
@@ -167,7 +172,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       mark: valorParts[0]!,
       observation: valorParts[1] || "",
       suggestion: valorParts[2] || "",
-      visible: mark.Visible.toLowerCase() === "true",
+      visible: mark.Visible ? mark.Visible.toLowerCase() === "true" : false,
     };
   });
   return {

@@ -31,13 +31,13 @@ export async function getCalendar(
     { subject: string; course: string; year: string },
     {},
     {},
-    { dataSheetId?: string }
+    { datasheetId?: string }
   >,
   response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year } = request.params;
-  let spreadsheetId = request.query.dataSheetId || "";
+  let spreadsheetId = request.query.datasheetId || "";
   if (!spreadsheetId) {
     try {
       spreadsheetId = await getSpreadsheetId(subject, course, Number(year));

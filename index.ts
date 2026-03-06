@@ -14,7 +14,7 @@ import {
   getRevisionRequests,
   getStudentMarks,
 } from "./controllers/students/marks.ts";
-import { getCalendar } from "./controllers/proyect/calendar.ts";
+import { getCalendar } from "./controllers/project/calendar.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -45,7 +45,7 @@ app.get("/material/:subject/:course/:year", getSubjectMaterials);
 app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
 app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
 
-// Proyect
+// Project
 app.get("/calendar/:subject/:course/:year", getCalendar);
 
 app
