@@ -243,14 +243,14 @@ export async function getStudentMarks(
 
 export async function getRevisionRequests(
   request: Request<
-    { course: string; year: string; subject: string; studentId: string },
+    { course: string; year: string; subject: string; id: string },
     {},
     {},
     {}
   >,
   response: Response,
 ) {
-  const { subject, course, year, studentId } = request.params;
+  const { subject, course, year, id } = request.params;
   const pendingRequestIds = await prisma.redo
     .findMany({
       where: {
@@ -263,7 +263,7 @@ export async function getRevisionRequests(
           studentCourse: {
             course,
             year: Number(year),
-            studentId: parseInt(studentId),
+            studentId: parseInt(id),
           },
         },
       },
