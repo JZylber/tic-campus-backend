@@ -6,6 +6,7 @@ import cors from "cors";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 import {
   getAllSubjects,
+  getSubjectStudents,
   getTemplateSubjects,
 } from "./controllers/subjects/allSubjects.ts";
 import { getSubjectMaterials } from "./controllers/subjects/material.ts";
@@ -15,6 +16,7 @@ import {
   getStudentMarks,
 } from "./controllers/students/marks.ts";
 import { getCalendar } from "./controllers/project/calendar.ts";
+import { requestRedo } from "./controllers/subjects/redos.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -33,9 +35,11 @@ app.get("/", (req, res) => {
 
 // Students
 app.get("/students", getAllStudents);
+app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-app.get("/revisionRequests/:subject/:course/:year", getRevisionRequests);
+app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
+app.post("/redoRequest", requestRedo);
 
 // Subjects
 app.get("/subjects", getAllSubjects);

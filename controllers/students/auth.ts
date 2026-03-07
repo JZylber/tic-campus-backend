@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 
-import { getSheetClient } from "../../connectors/google.ts";
 import Fuse from "fuse.js";
-import { getColumnIndex, setCacheHeaders } from "../shared.ts";
+import { setCacheHeaders } from "../shared.ts";
 import prisma from "../../prisma/prisma.ts";
 
 export async function getStudentData(
