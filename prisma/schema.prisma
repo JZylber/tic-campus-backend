@@ -33,19 +33,42 @@ model User {
 }
 
 model Subject {
-  id          Int     @id @default(autoincrement())
-  name        String
-  course      String
-  year        Int
-  spreadsheet String?
-  templateId  String
-  marks       Boolean @default(false)
+  id              Int              @id @default(autoincrement())
+  name            String
+  course          String
+  year            Int
+  spreadsheet     String?
+  templateId      String
+  marks           Boolean          @default(false)
+  studentSubjects StudentSubject[]
 }
 
 model StudentCourse {
-  id        Int    @id @default(autoincrement())
-  student   User   @relation(fields: [studentId], references: [id])
-  studentId Int
-  course    String
-  year      Int
+  id              Int              @id @default(autoincrement())
+  student         User             @relation(fields: [studentId], references: [id])
+  studentId       Int
+  course          String
+  year            Int
+  studentSubjects StudentSubject[]
+}
+
+model StudentSubject {
+  id              Int           @id @default(autoincrement())
+  studentCourse   StudentCourse @relation(fields: [studentCourseId], references: [id])
+  studentCourseId Int
+  subjectId       Int
+  subject         Subject       @relation(fields: [subjectId], references: [id])
+  redos           Redo[]
+}
+
+model Redo {
+  id               Int            @id @default(autoincrement())
+  studentSubject   StudentSubject @relation(fields: [studentSubjectId], references: [id])
+  studentSubjectId Int
+  activityId       String
+  reason           String
+  bonusTasks       String?
+  comment          String?
+  date             DateTime
+  reviewed         Boolean        @default(false)
 }
