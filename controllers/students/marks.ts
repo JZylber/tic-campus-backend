@@ -255,12 +255,15 @@ export async function getRevisionRequests(
     .findMany({
       where: {
         reviewed: false,
-        studentId,
         studentSubject: {
           subject: {
             name: subject,
+            year: Number(year),
+          },
+          studentCourse: {
             course,
             year: Number(year),
+            studentId: parseInt(studentId),
           },
         },
       },
