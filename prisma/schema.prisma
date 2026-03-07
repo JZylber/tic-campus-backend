@@ -33,42 +33,41 @@ model User {
 }
 
 model Subject {
-  id              Int              @id @default(autoincrement())
-  name            String
-  course          String
-  year            Int
-  spreadsheet     String?
-  templateId      String
-  marks           Boolean          @default(false)
-  studentSubjects StudentSubject[]
+  id            Int     @id @default(autoincrement())
+  name          String
+  spreadsheetId String?
+  templateId    String
+  marks         Boolean @default(false)
+  courseId      Int
+  course        Course  @relation(fields: [courseId], references: [id])
 }
 
 model StudentCourse {
-  id              Int              @id @default(autoincrement())
-  student         User             @relation(fields: [studentId], references: [id])
-  studentId       Int
-  course          String
-  year            Int
-  studentSubjects StudentSubject[]
+  id        Int    @id @default(autoincrement())
+  student   User   @relation(fields: [studentId], references: [id])
+  studentId Int
+  courseId  Int
+  course    Course @relation(fields: [courseId], references: [id])
+  redos     Redo[]
 }
 
-model StudentSubject {
-  id              Int           @id @default(autoincrement())
-  studentCourse   StudentCourse @relation(fields: [studentCourseId], references: [id])
-  studentCourseId Int
-  subjectId       Int
-  subject         Subject       @relation(fields: [subjectId], references: [id])
-  redos           Redo[]
+model Course {
+  id        Int             @id @default(autoincrement())
+  name      String
+  specialty String
+  year      Int
+  subjects  Subject[]
+  students  StudentCourse[]
 }
 
 model Redo {
-  id               Int            @id @default(autoincrement())
-  studentSubject   StudentSubject @relation(fields: [studentSubjectId], references: [id])
-  studentSubjectId Int
-  activityId       String
-  reason           String
-  bonusTasks       String?
-  comment          String?
-  date             DateTime
-  reviewed         Boolean        @default(false)
+  id              Int           @id @default(autoincrement())
+  studentCourse   StudentCourse @relation(fields: [studentCourseId], references: [id])
+  studentCourseId Int
+  activityId      String
+  reason          String
+  bonusTasks      String?
+  comment         String?
+  date            DateTime
+  reviewed        Boolean       @default(false)
 }
