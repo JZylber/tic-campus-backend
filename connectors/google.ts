@@ -64,17 +64,19 @@ export async function getSpreadsheetId(
   const spreadsheetId = await prisma.subject.findFirst({
     where: {
       name: subject,
-      course,
-      year,
+      course: {
+        name: course,
+        year,
+      },
     },
     select: {
-      spreadsheet: true,
+      spreadsheetId: true,
     },
   });
-  if (!spreadsheetId || !spreadsheetId.spreadsheet) {
+  if (!spreadsheetId || !spreadsheetId.spreadsheetId) {
     throw new Error(
       "Spreadsheet ID not found for the given subject, course and year",
     );
   }
-  return spreadsheetId.spreadsheet;
+  return spreadsheetId.spreadsheetId;
 }
