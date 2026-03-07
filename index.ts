@@ -38,7 +38,7 @@ app.get("/students", getAllStudents);
 app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-app.get("/revisionRequests/:subject/:course/:year", getRevisionRequests);
+app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
 app.post("/redoRequest", requestRedo);
 
 // Subjects
