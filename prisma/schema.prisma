@@ -22,24 +22,26 @@ enum Role {
 // Define your database models here
 
 model User {
-  id             Int             @id @default(autoincrement())
-  dni            String          @unique
-  email          String          @unique
+  id             Int               @id @default(autoincrement())
+  dni            String            @unique
+  email          String            @unique
   name           String?
   surname        String?
-  googleId       String?         @unique
-  role           Role            @default(STUDENT)
+  googleId       String?           @unique
+  role           Role              @default(STUDENT)
   studentCourses StudentCourse[]
+  redos          RevisionRequest[]
 }
 
 model Subject {
-  id            Int     @id @default(autoincrement())
+  id            Int               @id @default(autoincrement())
   name          String
   spreadsheetId String?
   templateId    String
-  marks         Boolean @default(false)
+  marks         Boolean           @default(false)
   courseId      Int
-  course        Course  @relation(fields: [courseId], references: [id])
+  course        Course            @relation(fields: [courseId], references: [id])
+  redos         RevisionRequest[]
 }
 
 model StudentCourse {
@@ -48,7 +50,6 @@ model StudentCourse {
   studentId Int
   courseId  Int
   course    Course @relation(fields: [courseId], references: [id])
-  redos     Redo[]
 }
 
 model Course {
@@ -60,14 +61,16 @@ model Course {
   students  StudentCourse[]
 }
 
-model Redo {
-  id              Int           @id @default(autoincrement())
-  studentCourse   StudentCourse @relation(fields: [studentCourseId], references: [id])
-  studentCourseId Int
-  activityId      String
-  reason          String
-  bonusTasks      String?
-  comment         String?
-  date            DateTime
-  reviewed        Boolean       @default(false)
+model RevisionRequest {
+  id         Int      @id @default(autoincrement())
+  student    User     @relation(fields: [studentId], references: [id])
+  studentId  Int
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  subjectId  Int
+  activityId String
+  reason     String
+  bonusTasks String?
+  comment    String?
+  date       DateTime
+  reviewed   Boolean  @default(false)
 }
