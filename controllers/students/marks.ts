@@ -251,27 +251,26 @@ export async function getRevisionRequests(
   response: Response,
 ) {
   const { subject, course, year, id } = request.params;
-  const pendingRequestIds = await prisma.redo
+  const pendingRequestIds = await prisma.revisionRequest
     .findMany({
       where: {
         reviewed: false,
-        studentSubject: {
-          subject: {
-            name: subject,
+        subject: {
+          name: subject,
+          course: {
+            name: course,
             year: Number(year),
-          },
-          studentCourse: {
-            course,
-            year: Number(year),
-            studentId: parseInt(id),
           },
         },
+        studentId: parseInt(id),
       },
       select: {
         activityId: true,
       },
     })
-    .then((redos) => redos.map((redo) => redo.activityId.toString()));
+    .then((revisionRequests) =>
+      revisionRequests.map((request) => request.activityId.toString()),
+    );
   setCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
 }

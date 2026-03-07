@@ -12,31 +12,33 @@ type Subject = {
 export async function getAllSubjects(request: Request, response: Response) {
   // Select subjects where course is not empty, and order by year desc, name asc and course asc
   const subjectsQuery = await prisma.subject.findMany({
-    where: {
-      course: {
-        not: "",
-      },
+    include: {
+      course: true,
     },
     orderBy: [
       {
-        year: "desc",
+        course: {
+          year: "desc",
+        },
       },
       {
         name: "asc",
       },
       {
-        course: "asc",
+        course: {
+          name: "asc",
+        },
       },
     ],
   });
   const subjects: Subject[] = subjectsQuery.map((subject) => ({
     name: subject.name,
-    course: subject.course,
-    level: Number(subject.course[2] || 0),
-    division: subject.course[3] || "",
-    year: subject.year,
+    course: subject.course.name,
+    level: Number(subject.course.name[2] || 0),
+    division: subject.course.name[3] || "",
+    year: subject.course.year,
     template: subject.templateId,
-    spreadsheetId: subject.spreadsheet,
+    spreadsheetId: subject.spreadsheetId,
   }));
   return response.status(200).send(subjects);
 }
@@ -49,20 +51,21 @@ export async function getTemplateSubjects(
   // Select subjects where course is not empty and templateId matches. Order by year desc, name asc and course asc
   const subjectsQuery = await prisma.subject.findMany({
     where: {
-      course: {
-        not: "",
-      },
       templateId,
     },
     orderBy: [
       {
-        year: "desc",
+        course: {
+          year: "desc",
+        },
       },
       {
         name: "asc",
       },
       {
-        course: "asc",
+        course: {
+          name: "asc",
+        },
       },
     ],
   });
@@ -76,11 +79,11 @@ export async function getSubjectStudents(
   const { subject, course, year } = request.params;
   const studentsQuery = await prisma.studentCourse.findMany({
     where: {
-      course,
-      year: Number(year),
-      studentSubjects: {
-        some: {
-          subject: {
+      course: {
+        name: course,
+        year: Number(year),
+        subjects: {
+          some: {
             name: subject,
           },
         },
@@ -88,6 +91,7 @@ export async function getSubjectStudents(
     },
     include: {
       student: true,
+      course: true,
     },
   });
   // Map studentsQuery to an array of students with id, name, surname, year and course
@@ -95,8 +99,8 @@ export async function getSubjectStudents(
     id: studentCourse.student.id,
     name: studentCourse.student.name,
     surname: studentCourse.student.surname,
-    year: studentCourse.year,
-    course: studentCourse.course,
+    year: studentCourse.course.year,
+    course: studentCourse.course.name,
   }));
   return response.status(200).send(students);
 }

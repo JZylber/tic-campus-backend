@@ -14,31 +14,25 @@ type Student = {
 };
 
 export async function getAllStudents(request: Request, response: Response) {
-  const studentsQueryPromise = prisma.studentCourse.findMany({
+  const studentsQuery = await prisma.studentCourse.findMany({
     include: {
       student: true,
+      course: {
+        include: {
+          subjects: true,
+        },
+      },
     },
   });
-  const subjectsQueryPromise = prisma.subject.findMany();
-  const [studentsQuery, subjectsQuery] = await Promise.all([
-    studentsQueryPromise,
-    subjectsQueryPromise,
-  ]);
   const students: Student[] = studentsQuery.map((studentCourse) => ({
     id: studentCourse.student.id.toString(),
     name: studentCourse.student.name!,
     surname: studentCourse.student.surname!,
     dni: studentCourse.student.dni,
     email: studentCourse.student.email,
-    year: studentCourse.year,
-    course: studentCourse.course,
-    subjects: subjectsQuery
-      .filter(
-        (subject) =>
-          subject.course === studentCourse.course &&
-          subject.year === studentCourse.year,
-      )
-      .map((subject) => subject.name),
+    year: studentCourse.course.year,
+    course: studentCourse.course.name,
+    subjects: studentCourse.course.subjects.map((subject) => subject.name),
   }));
   // If year is 2025, id is equal to dni, otherwise is the id in database
   const studentsWithId = students.map((student) => ({

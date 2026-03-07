@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
 
-export async function requestRedo(
+export async function requestRevision(
   request: Request<
     {},
     {},
@@ -47,77 +47,77 @@ export async function requestRedo(
       message: "Las reentregas solo pueden ser solicitadas para el año actual.",
     });
   }
-  // Check that there are no redo request for the same activity and student that are not reviewed yet
-  const existingRedos = (
-    await prisma.redo.findMany({
+  // Check that there are no revision requests for the same activity and student that are not reviewed yet
+  const existingRevisionRequests = (
+    await prisma.revisionRequest.findMany({
       where: {
-        studentSubject: {
-          subject: {
-            name: subject,
-            year,
+        subject: {
+          name: subject,
+          course: {
+            name: course,
+            year: Number(year),
           },
-          studentCourse: {
-            course,
-            student: {
-              id: { in: studentIds.map((id) => parseInt(id)) },
-            },
-          },
+        },
+        studentId: {
+          in: studentIds.map((id) => parseInt(id)),
         },
         activityId: activityId,
         reviewed: false,
       },
       select: {
-        studentSubject: {
+        student: {
           select: {
-            studentCourse: {
-              select: {
-                student: {
-                  select: { name: true, surname: true },
-                },
-              },
-            },
+            id: true,
+            name: true,
+            surname: true,
+          },
+        },
+        subject: {
+          select: {
+            id: true,
           },
         },
       },
     })
   ).map((redo) => ({
-    name: redo.studentSubject.studentCourse.student.name,
-    surname: redo.studentSubject.studentCourse.student.surname,
+    name: redo.student.name,
+    surname: redo.student.surname,
   }));
-  if (existingRedos.length > 0) {
-    const studentNames = existingRedos
+  if (existingRevisionRequests.length > 0) {
+    const studentNames = existingRevisionRequests
       .map((student) => `${student.name} ${student.surname}`)
       .join(", ");
     return response.status(400).send({
       message: `Ya existe una solicitud de reentrega para esta actividad que no ha sido revisada aún de los siguientes estudiantes: ${studentNames}`,
     });
   }
-  // Create redo request for each student
-  // Get studentSubjectId for each student
-  const studentSubjects = await prisma.studentSubject.findMany({
-    where: {
-      subject: {
+  // Create revision request for each student
+  // Get subjectCourseId
+  const subjectId = await prisma.subject
+    .findFirst({
+      where: {
         name: subject,
-        year,
-      },
-      studentCourse: {
-        course,
-        student: {
-          id: { in: studentIds.map((id) => parseInt(id)) },
+        course: {
+          name: course,
+          year: Number(year),
         },
       },
-    },
-  });
-  const redosData = studentSubjects.map((studentSubject) => ({
-    studentSubjectId: studentSubject.id,
+      select: {
+        id: true,
+      },
+    })
+    .then((subject) => subject!.id);
+  const revisionData = studentIds.map((id) => ({
+    studentId: parseInt(id),
+    subjectId,
     activityId,
     reason,
     bonusTasks: bonusTasks || null,
     comment: comment || null,
     date,
   }));
-  await prisma.redo.createMany({
-    data: redosData,
+  await prisma.revisionRequest.createMany({
+    data: revisionData,
   });
   return response
     .status(200)

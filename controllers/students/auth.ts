@@ -9,19 +9,36 @@ export async function getStudentData(
   response: Response,
 ) {
   const { name, surname, year } = request.body;
-  const students = await prisma.user.findMany({
+  const studentsQuery = await prisma.user.findMany({
     where: {
       studentCourses: {
         some: {
-          year: year,
+          course: {
+            year: year,
+          },
         },
       },
     },
     include: {
-      studentCourses: true,
+      studentCourses: {
+        include: {
+          course: true,
+        },
+      },
     },
   });
-  const fuse = new Fuse(students!, {
+  const students = studentsQuery.map((student) => ({
+    id: student.id,
+    name: student.name!,
+    surname: student.surname!,
+    dni: student.dni,
+    email: student.email,
+    studentCourses: student.studentCourses.map((studentCourse) => ({
+      course: studentCourse.course.name,
+      year: studentCourse.course.year,
+    })),
+  }));
+  const fuse = new Fuse(students, {
     keys: ["name", "surname"],
     threshold: 0.4,
   });
@@ -33,7 +50,7 @@ export async function getStudentData(
   }
   let studentId = possibleStudents[0]!.item.id;
   let currentCourse = possibleStudents[0]!.item.studentCourses.find(
-    (course) => course.year === year,
+    (studentCourse) => studentCourse.year === year,
   )?.course;
   // IF year is 2025, use DNI as student ID
   if (year === 2025) {
