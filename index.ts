@@ -16,6 +16,7 @@ import {
   getStudentMarks,
 } from "./controllers/students/marks.ts";
 import { getCalendar } from "./controllers/project/calendar.ts";
+import { requestRedo } from "./controllers/subjects/redos.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -38,6 +39,7 @@ app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
 app.get("/revisionRequests/:subject/:course/:year", getRevisionRequests);
+app.post("/redoRequest", requestRedo);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
