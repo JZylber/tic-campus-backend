@@ -49,26 +49,35 @@ export async function getTemplateSubjects(
 ) {
   const { templateId } = request.params;
   // Select subjects where course is not empty and templateId matches. Order by year desc, name asc and course asc
-  const subjectsQuery = await prisma.subject.findMany({
-    where: {
-      templateId,
-    },
-    orderBy: [
-      {
-        course: {
-          year: "desc",
+  const subjectsQuery = (
+    await prisma.subject.findMany({
+      where: {
+        templateId,
+      },
+      orderBy: [
+        {
+          course: {
+            year: "desc",
+          },
         },
-      },
-      {
-        name: "asc",
-      },
-      {
-        course: {
+        {
           name: "asc",
         },
+        {
+          course: {
+            name: "asc",
+          },
+        },
+      ],
+      include: {
+        course: true,
       },
-    ],
-  });
+    })
+  ).map((subject) => ({
+    ...subject,
+    course: subject.course.name,
+    year: subject.course.year,
+  }));
   return response.status(200).send(subjectsQuery);
 }
 
