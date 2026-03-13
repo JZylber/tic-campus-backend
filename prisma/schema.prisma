@@ -22,26 +22,28 @@ enum Role {
 // Define your database models here
 
 model User {
-  id             Int               @id @default(autoincrement())
-  dni            String            @unique
-  email          String            @unique
-  name           String?
-  surname        String?
-  googleId       String?           @unique
-  role           Role              @default(STUDENT)
-  studentCourses StudentCourse[]
-  redos          RevisionRequest[]
+  id              Int               @id @default(autoincrement())
+  dni             String            @unique
+  email           String            @unique
+  name            String?
+  surname         String?
+  googleId        String?           @unique
+  role            Role              @default(STUDENT)
+  studentCourses  StudentCourse[]
+  redos           RevisionRequest[]
+  teacherSubjects TeacherSubject[]
 }
 
 model Subject {
-  id            Int               @id @default(autoincrement())
-  name          String
-  spreadsheetId String?
-  templateId    String
-  marks         Boolean           @default(false)
-  courseId      Int
-  course        Course            @relation(fields: [courseId], references: [id])
-  redos         RevisionRequest[]
+  id              Int               @id @default(autoincrement())
+  name            String
+  spreadsheetId   String?
+  templateId      String
+  marks           Boolean           @default(false)
+  courseId        Int
+  course          Course            @relation(fields: [courseId], references: [id])
+  redos           RevisionRequest[]
+  teacherSubjects TeacherSubject[]
 }
 
 model StudentCourse {
@@ -50,6 +52,14 @@ model StudentCourse {
   studentId Int
   courseId  Int
   course    Course @relation(fields: [courseId], references: [id])
+}
+
+model TeacherSubject {
+  id        Int     @id @default(autoincrement())
+  teacher   User    @relation(fields: [teacherId], references: [id])
+  teacherId Int
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId Int
 }
 
 model Course {
