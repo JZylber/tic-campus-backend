@@ -16,7 +16,10 @@ import {
   getStudentMarks,
 } from "./controllers/students/marks.ts";
 import { getCalendar } from "./controllers/project/calendar.ts";
-import { requestRevision } from "./controllers/subjects/revision.ts";
+import {
+  getRevisionRequestsByTeacher,
+  requestRevision,
+} from "./controllers/subjects/revision.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
@@ -38,8 +41,6 @@ app.get("/students", getAllStudents);
 app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
-app.post("/revisionRequest", requestRevision);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
@@ -48,6 +49,14 @@ app.get("/articles/:subject/:course/:year", getSubjectArticles);
 app.get("/material/:subject/:course/:year", getSubjectMaterials);
 app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
 app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
+
+// Revisions
+app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
+app.get(
+  "/revisionRequests/teacher/:year/:teacherId",
+  getRevisionRequestsByTeacher,
+);
+app.post("/revisionRequest", requestRevision);
 
 // Project
 app.get("/calendar/:subject/:course/:year", getCalendar);
