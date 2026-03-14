@@ -141,6 +141,7 @@ export async function getRevisionRequestsByTeacher(
           },
         },
       },
+      reviewed: false,
     },
     select: {
       id: true,
