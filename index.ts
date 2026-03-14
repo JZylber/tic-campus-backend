@@ -6,6 +6,7 @@ import cors from "cors";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 import {
   getAllSubjects,
+  getSubjectStudents,
   getTemplateSubjects,
 } from "./controllers/subjects/allSubjects.ts";
 import { getSubjectMaterials } from "./controllers/subjects/material.ts";
@@ -14,17 +15,15 @@ import {
   getRevisionRequests,
   getStudentMarks,
 } from "./controllers/students/marks.ts";
-import { PrismaClient } from "./generated/prisma/client.ts";
-import { PrismaPg } from "@prisma/adapter-pg";
 import passport from "./connectors/passport-config.ts";
+import { getCalendar } from "./controllers/project/calendar.ts";
+import {
+  getRevisionRequestsByTeacher,
+  requestRevision,
+} from "./controllers/subjects/revision.ts";
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
-
-const connectionString = `${process.env.DATABASE_URL}`;
-
-const adapter = new PrismaPg({ connectionString });
-export const prisma = new PrismaClient({ adapter }); // Prisma Client
 
 const app = express();
 app.use(passport.initialize());
@@ -41,9 +40,9 @@ app.get("/", (req, res) => {
 
 // Students
 app.get("/students", getAllStudents);
+app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-app.get("/revisionRequests/:subject/:course/:year", getRevisionRequests);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
@@ -52,6 +51,17 @@ app.get("/articles/:subject/:course/:year", getSubjectArticles);
 app.get("/material/:subject/:course/:year", getSubjectMaterials);
 app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
 app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
+
+// Revisions
+app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
+app.get(
+  "/revisionRequests/teacher/:year/:teacherId",
+  getRevisionRequestsByTeacher,
+);
+app.post("/revisionRequest", requestRevision);
+
+// Project
+app.get("/calendar/:subject/:course/:year", getCalendar);
 
 app
   .listen(PORT, () => {

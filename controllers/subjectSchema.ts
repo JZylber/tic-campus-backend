@@ -1,3 +1,12 @@
+export type AllSubjectsTable = Array<{
+  Materia: string;
+  Curso: string;
+  Año: string;
+  "Spreadsheet ID": string;
+  "Id Template": string;
+  Notas: string;
+}>;
+
 export type StudentTable = Array<{
   Id: string;
   DNI: string;
@@ -145,4 +154,22 @@ export type MaterialTable = Array<{
   Link: string;
   Tipo: string;
   Visible: string;
+}>;
+
+// Proyect
+export type ScheduleTable = Array<{
+  Materia: string;
+  TICurso: string;
+  Día: string;
+  Bloque: string;
+  Profe: string;
+  Ámbito: string;
+}>;
+
+export type EventTable = Array<{
+  Nombre: string;
+  Fecha: string;
+  Bloque: string;
+  Grupo: string;
+  Ámbito: string | undefined;
 }>;

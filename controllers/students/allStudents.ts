@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
-import { prisma } from "../../index.ts";
+import prisma from "../../prisma/prisma.ts";
 import { setCacheHeaders } from "../shared.ts";
+import { getAllSubjects } from "../subjects/allSubjects.ts";
 
 type Student = {
   id: string;
@@ -16,6 +17,11 @@ export async function getAllStudents(request: Request, response: Response) {
   const studentsQuery = await prisma.studentCourse.findMany({
     include: {
       student: true,
+      course: {
+        include: {
+          subjects: true,
+        },
+      },
     },
   });
   const students: Student[] = studentsQuery.map((studentCourse) => ({
@@ -24,8 +30,9 @@ export async function getAllStudents(request: Request, response: Response) {
     surname: studentCourse.student.surname!,
     dni: studentCourse.student.dni,
     email: studentCourse.student.email,
-    year: studentCourse.year,
-    course: studentCourse.course,
+    year: studentCourse.course.year,
+    course: studentCourse.course.name,
+    subjects: studentCourse.course.subjects.map((subject) => subject.name),
   }));
   // If year is 2025, id is equal to dni, otherwise is the id in database
   const studentsWithId = students.map((student) => ({

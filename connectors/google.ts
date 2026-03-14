@@ -2,7 +2,7 @@ import process from "node:process";
 import { google } from "googleapis";
 import { promises as fs } from "fs";
 import path from "path";
-import { prisma } from "../index.ts";
+import prisma from "../prisma/prisma.ts";
 
 interface SpreadsheetIdInformation {
   subject: string;
@@ -64,17 +64,19 @@ export async function getSpreadsheetId(
   const spreadsheetId = await prisma.subject.findFirst({
     where: {
       name: subject,
-      course,
-      year,
+      course: {
+        name: course,
+        year,
+      },
     },
     select: {
-      spreadsheet: true,
+      spreadsheetId: true,
     },
   });
-  if (!spreadsheetId || !spreadsheetId.spreadsheet) {
+  if (!spreadsheetId || !spreadsheetId.spreadsheetId) {
     throw new Error(
       "Spreadsheet ID not found for the given subject, course and year",
     );
   }
-  return spreadsheetId.spreadsheet;
+  return spreadsheetId.spreadsheetId;
 }

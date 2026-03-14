@@ -7,9 +7,9 @@ import type {
   RedosTable,
   SubjectTable,
   ContentsTable,
-  RedoRequestsTable,
   FixedMarksTable,
 } from "../subjectSchema.ts";
+import prisma from "../../prisma/prisma.ts";
 
 interface Activity {
   studentId: string;
@@ -94,33 +94,53 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
     .filter((c) => c.Materia === subject)
     .map((c) => ({ Id: c.Id, Nombre: c.Nombre }));
   // Convert activitiesData to ClassActivity[]. Filter by subjectContentIds.
+  console.log("Activities data:", activitiesData);
   const classActivities: ClassActivity[] = activitiesData
-    .map((activity) => ({
-      studentId: activity["Id Estudiante"],
-      name: activity["Nombre Actividad"],
-      id: activity["Id Actividad"],
-      comment: activity.Aclaración,
-      done: activity.Realizada.toLowerCase() === "true",
-      visible: activity.Visible.toLowerCase() === "true",
-    }))
+    .filter(
+      (activity) =>
+        activity["Id Estudiante"] !== "" && activity["Id Actividad"] !== "",
+    )
+    .map((activity) => {
+      return {
+        studentId: activity["Id Estudiante"],
+        name: activity["Nombre Actividad"],
+        id: activity["Id Actividad"],
+        comment: activity.Aclaración,
+        done: activity.Realizada
+          ? activity.Realizada.toLowerCase() === "true"
+          : false,
+        visible: activity.Visible
+          ? activity.Visible.toLowerCase() === "true"
+          : false,
+      };
+    })
     .filter((activity) =>
-      subjectContent.some((content) => content.Id === activity.id)
+      subjectContent.some((content) => content.Id === activity.id),
     );
   // Convert marksData to MarkedActivity[]. Filter by subjectContentIds.
   const markedActivities: MarkedActivity[] = marksData
+    .filter(
+      (mark) =>
+        mark["Id Estudiante"] !== "" &&
+        mark["Id Actividad"] !== "" &&
+        mark.Nota,
+    )
     .map((mark) => ({
       studentId: mark["Id Estudiante"],
       name: mark["Nombre Actividad"],
       id: mark["Id Actividad"],
       comment: mark.Aclaración,
       mark: parseFloat(mark.Nota.replace(",", ".")),
-      visible: mark.Visible.toLowerCase() === "true",
+      visible: mark.Visible ? mark.Visible.toLowerCase() === "true" : false,
     }))
     .filter((activity) =>
-      subjectContent.some((content) => content.Id === activity.id)
+      subjectContent.some((content) => content.Id === activity.id),
     );
   // Convert redosData to RedoActivity[]. Filter by subjectContentIds.
   const redoActivities: RedoActivity[] = redosData
+    .filter(
+      (redo) => redo["Id Estudiante"] !== "" && redo["Id Actividad"] !== "",
+    )
     .map((redo) => ({
       studentId: redo["Id Estudiante"],
       name: redo["Nombre Recuperatorio"],
@@ -128,16 +148,18 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       comment: redo.Aclaración,
       mark: parseFloat(redo.Nota.replace(",", ".")),
       coveredActivities: redo["Id Actividad"].split(",").map((a) => a.trim()),
-      visible: redo.Visible.toLowerCase() === "true",
+      visible: redo.Visible ? redo.Visible.toLowerCase() === "true" : false,
     }))
     .filter((activity) =>
       activity.coveredActivities.every((id) =>
-        subjectContent.some((content) => content.Id === id)
-      )
+        subjectContent.some((content) => content.Id === id),
+      ),
     );
   // Get fixed marks for the subject
   const subjectFixedMarks = fixedMarksData.filter(
-    (mark) => mark.Materia === subject || !mark.Materia
+    (mark) =>
+      mark.Materia === subject ||
+      (!mark.Materia && mark["Id Estudiante"] !== ""),
   );
   // Some marks are Nota - Observación - Sugerencia
   const fixedMarks: FixedMarkRecord[] = subjectFixedMarks.map((mark) => {
@@ -150,7 +172,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       mark: valorParts[0]!,
       observation: valorParts[1] || "",
       suggestion: valorParts[2] || "",
-      visible: mark.Visible.toLowerCase() === "true",
+      visible: mark.Visible ? mark.Visible.toLowerCase() === "true" : false,
     };
   });
   return {
@@ -169,7 +191,7 @@ export async function getStudentMarks(
     {},
     { dataSheetId?: string }
   >,
-  response: Response
+  response: Response,
 ) {
   // Get parameters from request parameters
   const { subject, course, year, id } = request.params;
@@ -190,13 +212,13 @@ export async function getStudentMarks(
   } = await getMarksAndCriteria(subject, spreadsheetId);
   // Filter activities by student ID and visibility
   const studentClassActivities = classActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentMarkedActivities = markedActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentRedoActivities = redoActivities.filter(
-    (activity) => activity.studentId === id && activity.visible
+    (activity) => activity.studentId === id && activity.visible,
   );
   const studentFixedMarks: FixedMarks = {};
   fixedMarks
@@ -221,66 +243,34 @@ export async function getStudentMarks(
 
 export async function getRevisionRequests(
   request: Request<
-    { course: string; year: string; subject: string },
+    { course: string; year: string; subject: string; id: string },
     {},
     {},
-    { dataSheetId?: string; name?: string; surname?: string }
+    {}
   >,
-  response: Response
+  response: Response,
 ) {
-  const { subject, course, year } = request.params;
-  const { name = "", surname = "", dataSheetId = "" } = request.query;
-  let spreadsheetId = dataSheetId;
-  if (!spreadsheetId) {
-    try {
-      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
-    } catch (error) {
-      return response.status(404).send({ error: (error as Error).message });
-    }
-  }
-  // Level is derived from Curso: "NR3A" -> 3, "NR5C" -> 5, etc.
-  const level = Number(course.match(/\d+/)?.[0] || 0);
-  const sheets = await getSheetClient();
-  // Get Reentrega A{level} and Reentrega N{level} sheets
-  const redoRequestsPromise = sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `Reentrega A${level}!A:F`,
-  });
-  const redoRequestsNPromise = sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `Reentrega N${level}!A:F`,
-  });
-  // Promises can fail independently if the sheets don't exist
-  const [redoRequestsRes, redoRequestsNRes] = await Promise.allSettled([
-    redoRequestsPromise,
-    redoRequestsNPromise,
-  ]);
-  let redoRequestsData: RedoRequestsTable = [];
-  if (redoRequestsRes.status === "fulfilled") {
-    redoRequestsData = redoRequestsData.concat(
-      asTableData(redoRequestsRes.value.data.values!) as RedoRequestsTable
+  const { subject, course, year, id } = request.params;
+  const pendingRequestIds = await prisma.revisionRequest
+    .findMany({
+      where: {
+        reviewed: false,
+        subject: {
+          name: subject,
+          course: {
+            name: course,
+            year: Number(year),
+          },
+        },
+        studentId: parseInt(id),
+      },
+      select: {
+        activityId: true,
+      },
+    })
+    .then((revisionRequests) =>
+      revisionRequests.map((request) => request.activityId.toString()),
     );
-  }
-  if (redoRequestsNRes.status === "fulfilled") {
-    redoRequestsData = redoRequestsData.concat(
-      asTableData(redoRequestsNRes.value.data.values!) as RedoRequestsTable
-    );
-  }
-  // Filter those requests that are not reviewed and match name and surname to any of the members in "Integrantes". Format of "Integrantes" is "Surname - Name, Surname - Name, ..."
-  const pendingRequests = redoRequestsData.filter((request) => {
-    if (request.Revisado.toLowerCase() === "true") return false;
-    if (!name || !surname) return true;
-    const integrantes = request.Integrantes.split(",").map((member) =>
-      member.trim().toLowerCase()
-    );
-    const fullName = `${surname} - ${name}`.toLowerCase();
-    return integrantes.includes(fullName);
-  });
-  // Get only ids of pending requests
-  const pendingRequestIds = pendingRequests.map(
-    (request) => request["Id Actividad"]
-  );
-  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
   setCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
 }

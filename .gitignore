@@ -147,3 +147,6 @@ credentials.json
 /generated/prisma
 # Local db population file
 aux.ts
+
+# Workspace files
+*.code-workspace
