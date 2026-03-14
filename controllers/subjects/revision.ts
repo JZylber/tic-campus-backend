@@ -172,6 +172,7 @@ export async function getRevisionRequestsByTeacher(
   });
   // Flatten the response
   const flattenedRequests = revisionRequests.map((request) => ({
+    revisionRequestId: request.id,
     studentId: request.student.id,
     studentName: request.student.name,
     studentSurname: request.student.surname,
