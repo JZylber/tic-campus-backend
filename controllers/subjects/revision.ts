@@ -123,3 +123,67 @@ export async function requestRevision(
     .status(200)
     .send({ message: "¡Reentrega solicitada exitosamente!" });
 }
+
+export async function getRevisionRequestsByTeacher(
+  request: Request<{ year: string; teacherId: string }, {}, {}, {}>,
+  response: Response,
+) {
+  const { year, teacherId } = request.params;
+  const revisionRequests = await prisma.revisionRequest.findMany({
+    where: {
+      subject: {
+        course: {
+          year: parseInt(year),
+        },
+        teacherSubjects: {
+          some: {
+            teacherId: parseInt(teacherId),
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          surname: true,
+        },
+      },
+      subject: {
+        select: {
+          name: true,
+          course: {
+            select: {
+              name: true,
+              year: true,
+            },
+          },
+        },
+      },
+      activityId: true,
+      reason: true,
+      bonusTasks: true,
+      comment: true,
+      date: true,
+      reviewed: true,
+    },
+  });
+  // Flatten the response
+  const flattenedRequests = revisionRequests.map((request) => ({
+    studentId: request.student.id,
+    studentName: request.student.name,
+    studentSurname: request.student.surname,
+    subjectName: request.subject.name,
+    courseName: request.subject.course.name,
+    courseYear: request.subject.course.year,
+    activityId: request.activityId,
+    reason: request.reason,
+    bonusTasks: request.bonusTasks,
+    comment: request.comment,
+    date: request.date,
+    reviewed: request.reviewed,
+  }));
+  return response.status(200).send(flattenedRequests);
+}
