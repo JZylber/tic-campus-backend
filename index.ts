@@ -15,19 +15,20 @@ import {
   getRevisionRequests,
   getStudentMarks,
 } from "./controllers/students/marks.ts";
-import passport from "./connectors/passport-config.ts";
 import { getCalendar } from "./controllers/project/calendar.ts";
 import {
   getRevisionRequestsByTeacher,
   requestRevision,
 } from "./controllers/subjects/revision.ts";
+
+import authRoute from "./routes/authRoute.ts"; // our authRoute
+import userRoute from "./routes/student/mockUser.ts"; // our userRoute
+
 // configures dotenv to work in your application
 dotenv.config();
 // setup google credentials
 
 const app = express();
-app.use(passport.initialize());
-
 const PORT = process.env.PORT;
 
 app.use(express.json());
@@ -37,6 +38,10 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("TIC Campus Backend is running.");
 });
+
+// Auth
+app.use("/auth", authRoute);
+app.use("/user", userRoute);
 
 // Students
 app.get("/students", getAllStudents);
