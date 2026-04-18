@@ -39,7 +39,7 @@ export async function getSubjectMaterials(
   const materialData = asTableData(materialRes.data.values!) as MaterialTable;
   // Filter only visible materials and that subject matches
   const visibleMaterialData = materialData.filter(
-    (row) => row.Visible.toLowerCase() === "true" && row.Materia === subject
+    (row) => row.Visible && row.Visible.toLowerCase() === "true" && row.Materia === subject
   );
   const materials: Material[] = visibleMaterialData.map((row) => ({
     name: row.Nombre,

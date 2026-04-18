@@ -150,3 +150,4 @@ aux.ts
 
 # Workspace files
 *.code-workspace
+.env*.local
