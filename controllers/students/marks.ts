@@ -274,3 +274,44 @@ export async function getRevisionRequests(
   setCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
 }
+
+export async function getTeacherSubjects(
+  request: Request<
+    { teacherId: string},
+    {},
+    {},
+    {}
+  >,
+  response: Response,
+) {
+  // Get all subjects taught by the teacher with their dataSheetId 
+  const { teacherId } = request.params;
+  const subjects = await prisma.subject.findMany({
+    where: {
+      teacherSubjects: {
+        some: {
+          teacherId: parseInt(teacherId),
+        },
+      },
+    },
+    select: {
+      name: true,
+      course: {
+        select: {
+          name: true,
+          year: true,
+        },
+      },
+      spreadsheetId: true,
+    },
+  });
+  setCacheHeaders(response, 100);
+  // Flatten the data to include subject name, course name, year and dataSheetId
+  const flattenedSubjects = subjects.map((subject) => ({
+    name: subject.name,
+    course: subject.course.name,
+    year: subject.course.year,
+    dataSheetId: subject.spreadsheetId,
+  }));
+  return response.status(200).send(flattenedSubjects);
+}

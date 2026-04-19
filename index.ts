@@ -14,6 +14,7 @@ import { getAllStudents } from "./controllers/students/allStudents.ts";
 import {
   getRevisionRequests,
   getStudentMarks,
+  getTeacherSubjects,
 } from "./controllers/students/marks.ts";
 import { getCalendar } from "./controllers/project/calendar.ts";
 import {
@@ -41,6 +42,9 @@ app.get("/students", getAllStudents);
 app.get("/students/:subject/:course/:year", getSubjectStudents);
 app.post("/student", getStudentData);
 app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
+
+// Teachers and Subjects
+app.get("/subjects/teacher/:teacherId", getTeacherSubjects);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
