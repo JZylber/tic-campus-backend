@@ -94,7 +94,6 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
     .filter((c) => c.Materia === subject)
     .map((c) => ({ Id: c.Id, Nombre: c.Nombre }));
   // Convert activitiesData to ClassActivity[]. Filter by subjectContentIds.
-  console.log("Activities data:", activitiesData);
   const classActivities: ClassActivity[] = activitiesData
     .filter(
       (activity) =>
@@ -314,4 +313,86 @@ export async function getTeacherSubjects(
     dataSheetId: subject.spreadsheetId,
   }));
   return response.status(200).send(flattenedSubjects);
+}
+
+export async function getMarksBySubject(
+  request: Request<
+    { subject: string; course: string; year: string },
+    {},
+    {},
+    { dataSheetId?: string }
+  >,
+  response: Response,
+) {
+  const { subject, course, year } = request.params;
+  let spreadsheetId = request.query.dataSheetId || "";
+  if (!spreadsheetId) {
+    try {
+      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+    } catch (error) {
+      return response.status(404).send({ error: (error as Error).message });
+    }
+  }
+  const { classActivities, markedActivities, redoActivities, criteria } =
+    await getMarksAndCriteria(subject, spreadsheetId);
+  // Group data by student ID
+  const marksByStudent: Record<
+    string,
+    {
+      classActivities: ClassActivity[];
+      markedActivities: MarkedActivity[];
+      redoActivities: RedoActivity[];
+      name: string;
+    }
+  > = {};
+  const createEmptyRecordIfNotExists = (studentId: string) => {
+    if (!marksByStudent[studentId]) {
+      marksByStudent[studentId] = {
+        classActivities: [],
+        markedActivities: [],
+        redoActivities: [],
+        name: "", // This will be filled later with the student's name from the database
+      };
+    }
+  };
+  classActivities.forEach((activity) => {
+    createEmptyRecordIfNotExists(activity.studentId);
+  });
+  markedActivities.forEach((activity) => {
+    createEmptyRecordIfNotExists(activity.studentId);
+  });
+  redoActivities.forEach((activity) => {
+    createEmptyRecordIfNotExists(activity.studentId);
+  });
+  // Get student names for each student ID from the database and add to the record
+  const studentIds = Object.keys(marksByStudent);
+  const students = await prisma.user.findMany({
+    where: {
+      id: {
+        in: studentIds.map((id) => parseInt(id)),
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      surname: true,
+    },
+  });
+  students.forEach((student) => {
+    if (marksByStudent[student.id.toString()]) {
+      marksByStudent[student.id.toString()]!.name = `${student.surname}, ${student.name}`;
+    }
+  });     
+  classActivities.forEach((activity) => {
+    marksByStudent[activity.studentId]!.classActivities.push(activity);
+  }
+  );
+  markedActivities.forEach((activity) => {
+    marksByStudent[activity.studentId]!.markedActivities.push(activity);
+  });
+  redoActivities.forEach((activity) => {
+    marksByStudent[activity.studentId]!.redoActivities.push(activity);
+  });
+  setCacheHeaders(response, 100);
+  return response.status(200).send({ marksByStudent, criteria });
 }

@@ -12,6 +12,7 @@ import {
 import { getSubjectMaterials } from "./controllers/subjects/material.ts";
 import { getAllStudents } from "./controllers/students/allStudents.ts";
 import {
+  getMarksBySubject,
   getRevisionRequests,
   getStudentMarks,
   getTeacherSubjects,
@@ -45,6 +46,7 @@ app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
 
 // Teachers and Subjects
 app.get("/subjects/teacher/:teacherId", getTeacherSubjects);
+app.get("/marks/:subject/:course/:year", getMarksBySubject);
 
 // Subjects
 app.get("/subjects", getAllSubjects);
