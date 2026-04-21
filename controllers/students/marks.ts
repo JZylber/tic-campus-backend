@@ -352,21 +352,16 @@ export async function getMarksBySubject(
       };
     }
   };
-  classActivities.forEach((activity) => {
-    createEmptyRecordIfNotExists(activity.studentId);
-  });
-  markedActivities.forEach((activity) => {
-    createEmptyRecordIfNotExists(activity.studentId);
-  });
-  redoActivities.forEach((activity) => {
-    createEmptyRecordIfNotExists(activity.studentId);
-  });
-  // Get student names for each student ID from the database and add to the record
-  const studentIds = Object.keys(marksByStudent);
+  // Get student names from the database and fill marksByStudent
   const students = await prisma.user.findMany({
     where: {
-      id: {
-        in: studentIds.map((id) => parseInt(id)),
+      studentCourses: {
+        some: {
+          course: {
+            name: course,
+            year: Number(year),
+          },
+        },
       },
     },
     select: {
@@ -376,19 +371,24 @@ export async function getMarksBySubject(
     },
   });
   students.forEach((student) => {
-    if (marksByStudent[student.id.toString()]) {
-      marksByStudent[student.id.toString()]!.name = student.name!;
-      marksByStudent[student.id.toString()]!.surname = student.surname!;
-    }
+    createEmptyRecordIfNotExists(student.id.toString());
+    marksByStudent[student.id.toString()]!.name = student.name!;
+    marksByStudent[student.id.toString()]!.surname = student.surname!;
   });
   classActivities.forEach((activity) => {
-    marksByStudent[activity.studentId]!.classActivities.push(activity);
+    if(marksByStudent[activity.studentId]) {
+      marksByStudent[activity.studentId]!.classActivities.push(activity);
+    }
   });
   markedActivities.forEach((activity) => {
-    marksByStudent[activity.studentId]!.markedActivities.push(activity);
+    if(marksByStudent[activity.studentId]) {
+      marksByStudent[activity.studentId]!.markedActivities.push(activity);
+    }
   });
   redoActivities.forEach((activity) => {
-    marksByStudent[activity.studentId]!.redoActivities.push(activity);
+    if(marksByStudent[activity.studentId]) {
+      marksByStudent[activity.studentId]!.redoActivities.push(activity);
+    }
   });
   setCacheHeaders(response, 100);
   return response.status(200).send({ marksByStudent, criteria });
