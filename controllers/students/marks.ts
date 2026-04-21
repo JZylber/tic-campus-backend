@@ -275,15 +275,10 @@ export async function getRevisionRequests(
 }
 
 export async function getTeacherSubjects(
-  request: Request<
-    { teacherId: string},
-    {},
-    {},
-    {}
-  >,
+  request: Request<{ teacherId: string }, {}, {}, {}>,
   response: Response,
 ) {
-  // Get all subjects taught by the teacher with their dataSheetId 
+  // Get all subjects taught by the teacher with their dataSheetId
   const { teacherId } = request.params;
   const subjects = await prisma.subject.findMany({
     where: {
@@ -343,6 +338,7 @@ export async function getMarksBySubject(
       markedActivities: MarkedActivity[];
       redoActivities: RedoActivity[];
       name: string;
+      surname: string;
     }
   > = {};
   const createEmptyRecordIfNotExists = (studentId: string) => {
@@ -352,6 +348,7 @@ export async function getMarksBySubject(
         markedActivities: [],
         redoActivities: [],
         name: "", // This will be filled later with the student's name from the database
+        surname: "",
       };
     }
   };
@@ -380,13 +377,13 @@ export async function getMarksBySubject(
   });
   students.forEach((student) => {
     if (marksByStudent[student.id.toString()]) {
-      marksByStudent[student.id.toString()]!.name = `${student.surname}, ${student.name}`;
+      marksByStudent[student.id.toString()]!.name = student.name!;
+      marksByStudent[student.id.toString()]!.surname = student.surname!;
     }
-  });     
+  });
   classActivities.forEach((activity) => {
     marksByStudent[activity.studentId]!.classActivities.push(activity);
-  }
-  );
+  });
   markedActivities.forEach((activity) => {
     marksByStudent[activity.studentId]!.markedActivities.push(activity);
   });
