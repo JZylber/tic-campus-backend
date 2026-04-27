@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
-import { asTableData } from "../shared.ts";
+import { asTableData, setCacheHeaders } from "../shared.ts";
 import type {
   CourseTable,
   SubjectTable,
@@ -52,6 +52,8 @@ export async function getHomeLinks(
       (c) => c.Materia === subject && c.Nombre === course.slice(-2),
     )?.["Link Grupo"]!;
   }
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to one day (86400 seconds)
+  setCacheHeaders(response, 86400);
   return response
     .status(200)
     .send({ group: groupLink, presentation: presentationLink });
@@ -82,6 +84,8 @@ export async function getRedoLinks(
   const redoTPsLink = subjectData.find((s) => s.Materia === subject)?.[
     "Reentrega TPs"
   ];
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to one day (86400 seconds)
+  setCacheHeaders(response, 86400);
   return response
     .status(200)
     .send({ activities: redoActivitiesLink, markedActivities: redoTPsLink });
