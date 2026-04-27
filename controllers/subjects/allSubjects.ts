@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
+import { setCacheHeaders } from "../shared.ts";
 
 type Subject = {
   name: string;
@@ -78,6 +79,8 @@ export async function getTemplateSubjects(
     course: subject.course.name,
     year: subject.course.year,
   }));
+  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to one hour (3600 seconds)
+  setCacheHeaders(response, 3600);
   return response.status(200).send(subjectsQuery);
 }
 
