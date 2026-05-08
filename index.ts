@@ -23,7 +23,7 @@ import {
   requestRevision,
 } from "./controllers/subjects/revision.ts";
 // configures dotenv to work in your application
-dotenv.config();
+dotenv.config({ path: [".env.local", ".env"] });
 // setup google credentials
 
 const app = express();
