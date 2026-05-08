@@ -60,7 +60,7 @@ async function getMarksAndCriteria(subject: string, dataSheetId: string) {
       "Recuperatorio!A:J",
       "Materia!A:G",
       "Contenidos!A:H",
-      "Notas Fijas!A:H",
+      "Notas Fijas!A:I",
     ],
   });
   const [
@@ -376,17 +376,17 @@ export async function getMarksBySubject(
     marksByStudent[student.id.toString()]!.surname = student.surname!;
   });
   classActivities.forEach((activity) => {
-    if(marksByStudent[activity.studentId] && activity.visible) {
+    if (marksByStudent[activity.studentId] && activity.visible) {
       marksByStudent[activity.studentId]!.classActivities.push(activity);
     }
   });
   markedActivities.forEach((activity) => {
-    if(marksByStudent[activity.studentId] && activity.visible) {
+    if (marksByStudent[activity.studentId] && activity.visible) {
       marksByStudent[activity.studentId]!.markedActivities.push(activity);
     }
   });
   redoActivities.forEach((activity) => {
-    if(marksByStudent[activity.studentId] && activity.visible) {
+    if (marksByStudent[activity.studentId] && activity.visible) {
       marksByStudent[activity.studentId]!.redoActivities.push(activity);
     }
   });
