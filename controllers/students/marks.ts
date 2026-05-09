@@ -278,13 +278,14 @@ export async function getTeacherSubjects(
   request: Request<{ teacherId: string }, {}, {}, {}>,
   response: Response,
 ) {
-  // Get all subjects taught by the teacher with their dataSheetId
-  const { teacherId } = request.params;
+  const user = request.user as { id: number; role: string };
+  const teacherId =
+    user.role === "TEACHER" ? user.id : parseInt(request.params.teacherId);
   const subjects = await prisma.subject.findMany({
     where: {
       teacherSubjects: {
         some: {
-          teacherId: parseInt(teacherId),
+          teacherId: teacherId,
         },
       },
     },
