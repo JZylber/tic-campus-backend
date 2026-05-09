@@ -1,77 +1,73 @@
+import "./loadEnv.ts";
 import express from "express";
-import dotenv from "dotenv";
-import { getStudentData } from "./controllers/students/auth.ts";
-import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
-import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
-import {
-  getAllSubjects,
-  getSubjectStudents,
-  getTemplateSubjects,
-} from "./controllers/subjects/allSubjects.ts";
-import { getSubjectMaterials } from "./controllers/subjects/material.ts";
-import { getAllStudents } from "./controllers/students/allStudents.ts";
-import {
-  getMarksBySubject,
-  getRevisionRequests,
-  getStudentMarks,
-  getTeacherSubjects,
-} from "./controllers/students/marks.ts";
-import { getCalendar } from "./controllers/project/calendar.ts";
-import {
-  getRevisionRequestsByTeacher,
-  requestRevision,
-} from "./controllers/subjects/revision.ts";
-// configures dotenv to work in your application
-dotenv.config({ path: [".env.local", ".env"] });
-// setup google credentials
+import cookieParser from "cookie-parser";
+
+import authRoute from "./routes/authRoute.ts";
+import userRoute from "./routes/student/userRole.ts";
+import studentsRoute from "./routes/student/students.ts";
+import studentRoute from "./routes/student/student.ts";
+import marksRoute from "./routes/student/marks.ts";
+import subjectsRoute from "./routes/subject/subjects.ts";
+import articlesRoute from "./routes/subject/articles.ts";
+import materialRoute from "./routes/subject/material.ts";
+import linksRoute from "./routes/subject/links.ts";
+import revisionRequestsRoute from "./routes/revision/revisionRequests.ts";
+import revisionRequestRoute from "./routes/revision/revisionRequest.ts";
+import calendarRoute from "./routes/project/calendar.ts";
 
 const app = express();
-
 const PORT = process.env.PORT;
 
 app.use(express.json());
+app.use(cookieParser());
 
-app.use(cors());
+const toOrigin = (url: string | undefined): string | null => {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
+const allowedOrigins = [
+  toOrigin(process.env.FE_BASE_URL),
+  toOrigin(process.env.FE_EMBED_URL),
+].filter((origin): origin is string => Boolean(origin));
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, origin);
+      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  }),
+);
 
 app.get("/", (req, res) => {
   res.send("TIC Campus Backend is running.");
 });
 
-// Students
-app.get("/students", getAllStudents);
-app.get("/students/:subject/:course/:year", getSubjectStudents);
-app.post("/student", getStudentData);
-app.get("/marks/:subject/:course/:year/:id", getStudentMarks);
-
-// Teachers and Subjects
-app.get("/subjects/teacher/:teacherId", getTeacherSubjects);
-app.get("/marks/:subject/:course/:year", getMarksBySubject);
-
-// Subjects
-app.get("/subjects", getAllSubjects);
-app.get("/subjects/:templateId", getTemplateSubjects);
-app.get("/articles/:subject/:course/:year", getSubjectArticles);
-app.get("/material/:subject/:course/:year", getSubjectMaterials);
-app.get("/homeLinks/:subject/:course/:year", getHomeLinks);
-app.get("/redoLinks/:subject/:course/:year", getRedoLinks);
-
-// Revisions
-app.get("/revisionRequests/:subject/:course/:year/:id", getRevisionRequests);
-app.get(
-  "/revisionRequests/teacher/:year/:teacherId",
-  getRevisionRequestsByTeacher,
-);
-app.post("/revisionRequest", requestRevision);
-
-// Project
-app.get("/calendar/:subject/:course/:year", getCalendar);
+app.use("/auth",             authRoute);
+app.use("/user",             userRoute);
+app.use("/students",         studentsRoute);
+app.use("/student",          studentRoute);
+app.use("/marks",            marksRoute);
+app.use("/subjects",         subjectsRoute);
+app.use("/articles",         articlesRoute);
+app.use("/material",         materialRoute);
+app.use("/links",            linksRoute);
+app.use("/revisionRequests", revisionRequestsRoute);
+app.use("/revisionRequest",  revisionRequestRoute);
+app.use("/calendar",         calendarRoute);
 
 app
   .listen(PORT, () => {
     console.log("Server running at PORT: ", PORT);
   })
   .on("error", (error) => {
-    // gracefully handle error
     throw new Error(error.message);
   });

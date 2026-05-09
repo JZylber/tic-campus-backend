@@ -128,7 +128,10 @@ export async function getRevisionRequestsByTeacher(
   request: Request<{ year: string; teacherId: string }, {}, {}, {}>,
   response: Response,
 ) {
-  const { year, teacherId } = request.params;
+  const user = request.user as { id: number; role: string };
+  const { year } = request.params;
+  const teacherId =
+    user.role === "TEACHER" ? user.id : parseInt(request.params.teacherId);
   const revisionRequests = await prisma.revisionRequest.findMany({
     where: {
       subject: {
@@ -137,7 +140,7 @@ export async function getRevisionRequestsByTeacher(
         },
         teacherSubjects: {
           some: {
-            teacherId: parseInt(teacherId),
+            teacherId: teacherId,
           },
         },
       },

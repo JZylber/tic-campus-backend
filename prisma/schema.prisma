@@ -28,6 +28,7 @@ model User {
   name            String?
   surname         String?
   googleId        String?           @unique
+  jwtSecureCode   String?
   role            Role              @default(STUDENT)
   studentCourses  StudentCourse[]
   redos           RevisionRequest[]
