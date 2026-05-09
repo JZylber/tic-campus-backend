@@ -20,7 +20,7 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 ├── routes/
 │   ├── authRoute.ts          # Google OAuth flow
 │   ├── student/
-│   │   ├── userRole.ts       # Authenticated user info
+│   │   ├── userInfo.ts       # Authenticated user info
 │   │   ├── students.ts       # Student list
 │   │   ├── student.ts        # Student lookup by name
 │   │   └── marks.ts          # Student and subject marks
@@ -98,7 +98,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/user/role` | `JWT` | Returns the authenticated user's role. |
+| `GET` | `/user/info` | `JWT` | Returns the authenticated user's `id`, `name`, `surname`, and `role`. |
 
 ### Students — `/students`
 

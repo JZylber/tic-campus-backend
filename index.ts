@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRoute from "./routes/authRoute.ts";
-import userRoute from "./routes/student/userRole.ts";
+import userRoute from "./routes/student/userInfo.ts";
 import studentsRoute from "./routes/student/students.ts";
 import teachersRoute from "./routes/teacher/teachers.ts";
 import studentRoute from "./routes/student/student.ts";
