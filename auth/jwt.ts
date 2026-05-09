@@ -4,7 +4,7 @@ import type { Request } from "express";
 import prisma from "../prisma/prisma.ts";
 
 const cookieExtractor = (req: Request): string | null => {
-  const token = req?.cookies?.accessToken;
+  const token = req?.cookies?.ticCampusAccessToken;
   return typeof token === "string" ? token : null;
 };
 

@@ -20,10 +20,12 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 ├── routes/
 │   ├── authRoute.ts          # Google OAuth flow
 │   ├── student/
-│   │   ├── mockUser.ts       # Authenticated user info
+│   │   ├── userRole.ts       # Authenticated user info
 │   │   ├── students.ts       # Student list
 │   │   ├── student.ts        # Student lookup by name
 │   │   └── marks.ts          # Student and subject marks
+│   ├── teacher/
+│   │   └── teachers.ts       # Teacher list
 │   ├── subject/
 │   │   ├── subjects.ts       # Subject catalogue
 │   │   ├── articles.ts       # Subject articles/units
@@ -39,6 +41,8 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 │   │   ├── allStudents.ts
 │   │   ├── auth.ts
 │   │   └── marks.ts
+│   ├── teachers/
+│   │   └── allTeachers.ts
 │   ├── subjects/
 │   │   ├── allSubjects.ts
 │   │   ├── articles.ts
@@ -75,80 +79,94 @@ pnpm start      # runs compiled output
 
 ## Endpoints
 
+Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). Requests without a valid token return `401`; requests with an insufficient role return `403`.
+
+| Symbol | Meaning |
+|---|---|
+| `JWT` | Valid JWT required (any authenticated user) |
+| `ADMIN` | Admin role required |
+| `ADMIN / TEACHER` | Admin or teacher role required |
+
 ### Auth — `/auth`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/auth/google` | Initiates the Google OAuth flow. Accepts an optional `returnTo` query param to redirect after login. |
-| `GET` | `/auth/google/callback` | OAuth callback. On success, signs a JWT and sets it as an httpOnly cookie (`ticCampusAccessToken`), then redirects to the frontend. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/auth/google` | — | Initiates the Google OAuth flow. Accepts an optional `returnTo` query param to redirect after login. |
+| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and sets it as an httpOnly cookie (`ticCampusAccessToken`), then redirects to the frontend. |
 
 ### User — `/user`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/user` | Returns the authenticated user's info (`id`, `googleId`, `role`). Requires a valid JWT cookie. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/user/role` | `JWT` | Returns the authenticated user's role. |
 
 ### Students — `/students`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/students` | Returns all students with their course information. Response is cached for 1 hour. |
-| `GET` | `/students/:subject/:course/:year` | Returns all students enrolled in a specific subject, course, and year with their personal details. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students with their course information. Response is cached for 1 hour. |
+| `GET` | `/students/:subject/:course/:year` | — | Returns all students enrolled in a specific subject, course, and year with their personal details. |
 
 ### Student — `/student`
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/student` | Searches for a student by `name` and `surname` for a given `year` using fuzzy matching. Returns the student ID and course information. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/student` | — | Searches for a student by `name` and `surname` for a given `year` using fuzzy matching. Returns the student ID and course information. |
+
+### Teachers — `/teachers`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/teachers` | `ADMIN` | Returns all teachers (`id`, `name`, `surname`), sorted by surname. Response is cached for 1 hour. |
 
 ### Marks — `/marks`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/marks/:subject/:course/:year/:id` | Returns marks, activities, and redos for a specific student in a subject. Filters by visibility and includes fixed marks and criteria. |
-| `GET` | `/marks/:subject/:course/:year` | Returns all students' activities, marked activities, and redos for a subject, organized by student ID with criteria information. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/marks/:subject/:course/:year/:id` | — | Returns marks, activities, and redos for a specific student in a subject. Filters by visibility and includes fixed marks and criteria. |
+| `GET` | `/marks/:subject/:course/:year` | `ADMIN / TEACHER` | Returns all students' activities, marked activities, and redos for a subject, organized by student ID with criteria information. |
 
 ### Subjects — `/subjects`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/subjects` | Returns all subjects with their course information, ordered by year (desc), name, and course. |
-| `GET` | `/subjects/teacher/:teacherId` | Returns all subjects taught by a specific teacher along with their spreadsheet IDs. |
-| `GET` | `/subjects/:templateId` | Returns subjects that match a specific template ID, ordered by year (desc), name, and course. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/subjects` | — | Returns all subjects with their course information, ordered by year (desc), name, and course. |
+| `GET` | `/subjects/teacher/:teacherId` | `ADMIN / TEACHER` | Returns all subjects taught by a specific teacher along with their spreadsheet IDs. |
+| `GET` | `/subjects/:templateId` | — | Returns subjects that match a specific template ID, ordered by year (desc), name, and course. |
 
 ### Articles — `/articles`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/articles/:subject/:course/:year` | Retrieves course content (units and articles) from Google Sheets for a subject, filtered by visibility and course, organized by unit. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/articles/:subject/:course/:year` | — | Retrieves course content (units and articles) from Google Sheets for a subject, filtered by visibility and course, organized by unit. |
 
 ### Material — `/material`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/material/:subject/:course/:year` | Returns visible teaching materials for a subject from Google Sheets (name, link, image, description, type). |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/material/:subject/:course/:year` | — | Returns visible teaching materials for a subject from Google Sheets (name, link, image, description, type). |
 
 ### Links — `/links`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/links/:subject/:course/:year` | Returns presentation and group links for a subject. Handles both single-course and multi-course spreadsheet layouts. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/links/:subject/:course/:year` | — | Returns presentation and group links for a subject. Handles both single-course and multi-course spreadsheet layouts. |
 
 ### Revision requests — `/revisionRequests`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/revisionRequests/:subject/:course/:year/:id` | Returns all unreviewed revision requests for a student in a specific subject/course/year. |
-| `GET` | `/revisionRequests/teacher/:year/:teacherId` | Returns all unreviewed revision requests across all subjects taught by a teacher in a given year. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/revisionRequests/:subject/:course/:year/:id` | — | Returns all unreviewed revision requests for a student in a specific subject/course/year. |
+| `GET` | `/revisionRequests/teacher/:year/:teacherId` | `ADMIN / TEACHER` | Returns all unreviewed revision requests across all subjects taught by a teacher in a given year. |
 
 ### Revision request — `/revisionRequest`
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/revisionRequest` | Creates revision requests for one or more students on an activity. Validates dates and checks for existing unreviewed requests before creating. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/revisionRequest` | — | Creates revision requests for one or more students on an activity. Validates dates and checks for existing unreviewed requests before creating. |
 
 ### Calendar — `/calendar`
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/calendar/:subject/:course/:year` | Returns schedule and event data from Google Sheets for a subject, grouped by course with event details and schedule information. |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/calendar/:subject/:course/:year` | — | Returns schedule and event data from Google Sheets for a subject, grouped by course with event details and schedule information. |
