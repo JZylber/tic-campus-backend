@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { getStudentData } from "./controllers/students/auth.ts";
 import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { getHomeLinks, getRedoLinks } from "./controllers/subjects/links.ts";
 import {
   getAllSubjects,
@@ -22,21 +23,52 @@ import {
   getRevisionRequestsByTeacher,
   requestRevision,
 } from "./controllers/subjects/revision.ts";
+
+import authRoute from "./routes/authRoute.ts"; // our authRoute
+import userRoute from "./routes/student/mockUser.ts"; // our userRoute
+
 // configures dotenv to work in your application
 dotenv.config({ path: [".env.local", ".env"] });
 // setup google credentials
 
 const app = express();
-
 const PORT = process.env.PORT;
 
 app.use(express.json());
+app.use(cookieParser());
 
-app.use(cors());
+const toOrigin = (url: string | undefined): string | null => {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
+const allowedOrigins = [
+  toOrigin(process.env.FE_BASE_URL),
+  toOrigin(process.env.FE_EMBED_URL),
+].filter((origin): origin is string => Boolean(origin));
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, origin);
+      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  }),
+);
 
 app.get("/", (req, res) => {
   res.send("TIC Campus Backend is running.");
 });
+
+// Auth
+app.use("/auth", authRoute);
+app.use("/user", userRoute);
 
 // Students
 app.get("/students", getAllStudents);
