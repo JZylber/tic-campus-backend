@@ -1,5 +1,5 @@
+import "./loadEnv.ts";
 import express from "express";
-import dotenv from "dotenv";
 import { getStudentData } from "./controllers/students/auth.ts";
 import { getSubjectArticles } from "./controllers/subjects/articles.ts";
 import cors from "cors";
@@ -26,10 +26,6 @@ import {
 
 import authRoute from "./routes/authRoute.ts"; // our authRoute
 import userRoute from "./routes/student/mockUser.ts"; // our userRoute
-
-// configures dotenv to work in your application
-dotenv.config({ path: [".env.local", ".env"] });
-// setup google credentials
 
 const app = express();
 const PORT = process.env.PORT;
