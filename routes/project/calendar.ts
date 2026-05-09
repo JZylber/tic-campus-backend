@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getCalendar } from "../../controllers/project/calendar.ts";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/:subject/:course/:year", getCalendar);
 

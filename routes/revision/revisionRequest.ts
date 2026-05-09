@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requestRevision } from "../../controllers/subjects/revision.ts";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", requestRevision);
 
