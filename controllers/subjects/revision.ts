@@ -144,7 +144,6 @@ export async function getRevisionRequestsByTeacher(
           },
         },
       },
-      reviewed: false,
     },
     select: {
       id: true,
@@ -191,4 +190,27 @@ export async function getRevisionRequestsByTeacher(
     reviewed: request.reviewed,
   }));
   return response.status(200).send(flattenedRequests);
+}
+
+export async function toggleRevisionRequestReviewed(
+  request: Request<{ id: string }, {}, { reviewed: boolean }>,
+  response: Response,
+) {
+  const id = parseInt(request.params.id);
+  const { reviewed } = request.body;
+
+  const existing = await prisma.revisionRequest.findUnique({ where: { id } });
+  if (!existing) {
+    return response
+      .status(404)
+      .send({ message: "Solicitud de reentrega no encontrada." });
+  }
+
+  const updated = await prisma.revisionRequest.update({
+    where: { id },
+    data: { reviewed },
+    select: { id: true, reviewed: true },
+  });
+
+  return response.status(200).send(updated);
 }

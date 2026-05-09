@@ -156,8 +156,36 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/revisionRequests/:subject/:course/:year/:id` | — | Returns all unreviewed revision requests for a student in a specific subject/course/year. |
-| `GET` | `/revisionRequests/teacher/:year/:teacherId` | `ADMIN / TEACHER` | Returns all unreviewed revision requests across all subjects taught by a teacher in a given year. |
+| `GET` | `/revisionRequests/:subject/:course/:year/:id` | — | Returns the activity IDs of all pending (unreviewed) revision requests for a student in a specific subject/course/year. |
+| `GET` | `/revisionRequests/teacher/:year/:teacherId` | `ADMIN / TEACHER` | Returns all revision requests (both reviewed and unreviewed) across all subjects taught by a teacher in a given year. |
+| `PATCH` | `/revisionRequests/:id/reviewed` | `ADMIN / TEACHER` | Marks a revision request as reviewed or unreviewed. |
+
+#### `PATCH /revisionRequests/:id/reviewed` — toggle reviewed status
+
+Use this endpoint to mark a specific revision request as reviewed or revert it to unreviewed.
+
+**URL param:** `:id` — the `revisionRequestId` returned by the teacher GET endpoint.
+
+**Request body:**
+```json
+{ "reviewed": true }
+```
+or
+```json
+{ "reviewed": false }
+```
+
+**Response `200`:**
+```json
+{ "id": 5, "reviewed": true }
+```
+
+**Response `404`** — revision request not found:
+```json
+{ "message": "Solicitud de reentrega no encontrada." }
+```
+
+**Frontend usage:** After a teacher views a revision request, call this endpoint with `{ "reviewed": true }` to mark it done. To revert it, call again with `{ "reviewed": false }`. The teacher list endpoint (`GET /revisionRequests/teacher/:year/:teacherId`) now returns all requests regardless of `reviewed` status, so the frontend should use the `reviewed` field on each item to drive any "pending / done" visual distinction.
 
 ### Revision request — `/revisionRequest`
 
