@@ -17,30 +17,35 @@ async function verify(
   done: VerifyCallback,
 ) {
   try {
-    // Check if user already exists
     let user = await prisma.user.findUnique({
       where: { googleId: profile.id },
     });
 
-    // If user doesn't exist, check if there's a user with the same email, and add googleId to that user
+    // First time signing in via Google: link by email if a row already exists.
     if (!user && profile.emails && profile.emails.length > 0) {
-      user = await prisma.user.findUnique({
+      const matched = await prisma.user.findUnique({
         where: { email: profile.emails[0]!.value },
       });
-      if (user) {
+      if (matched) {
         user = await prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: profile.id, jwtSecureCode: uuidv4() },
+          where: { id: matched.id },
+          data: { googleId: profile.id },
         });
       }
     }
-    // If user still doesn't exist, create a new one, throw an error if email is not available
+
     if (!user) {
       throw new Error(
         "No hay un mail registrado para esta cuenta de Google. ¡Hablá con Shulian!",
       );
     }
-    // Return the user (existing or newly created)
+
+    // Rotate jwtSecureCode on every login → invalidates any prior JWTs.
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { jwtSecureCode: uuidv4() },
+    });
+
     return done(null, user);
   } catch (error) {
     return done(error as Error);

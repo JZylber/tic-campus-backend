@@ -1,20 +1,19 @@
 import { Strategy, ExtractJwt } from "passport-jwt";
 import type { VerifiedCallback } from "passport-jwt";
-import bcrypt from "bcrypt";
+import type { Request } from "express";
 import prisma from "../prisma/prisma.ts";
 
+const cookieExtractor = (req: Request): string | null => {
+  const token = req?.cookies?.accessToken;
+  return typeof token === "string" ? token : null;
+};
+
 const options = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
   secretOrKey: process.env.JWT_SECRET || "secret-test",
 };
 
 async function verify(payload: any, done: VerifiedCallback) {
-  console.log("Verifying JWT with payload:", payload); // Debug log to check the payload structure
-  /* 
-    a valid JWT must have `id`, `googleId`, `jwtSecureCode` and `role`.
-    you can create your JWT like the way you like.
-  */
-  // bad path: JWT is not valid
   if (
     !payload?.id ||
     !payload?.googleId ||
@@ -24,7 +23,6 @@ async function verify(payload: any, done: VerifiedCallback) {
     return done(null, false);
   }
 
-  // try to find a User with the `id` in the JWT payload and role.
   const user = await prisma.user.findUnique({
     where: {
       id: payload.id,
@@ -33,24 +31,18 @@ async function verify(payload: any, done: VerifiedCallback) {
     },
   });
 
-  // bad path: User is not found.
   if (!user) {
     return done(null, false);
   }
 
-  // bad path: User does not have googleId or jwtSecureCode.
   if (!user.googleId || !user.jwtSecureCode) {
     return done(null, false);
   }
 
-  // compare User's jwtSecureCode with the JWT's `jwtSecureCode` that the
-  // request has.
-  // bad path: bad JWT
-  if (!bcrypt.compareSync(user.jwtSecureCode, payload.jwtSecureCode)) {
+  if (user.jwtSecureCode !== payload.jwtSecureCode) {
     return done(null, false);
   }
 
-  // happy path: JWT is valid, we auth the User.
   return done(null, user);
 }
 
