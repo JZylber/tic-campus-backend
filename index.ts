@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import authRoute from "./routes/authRoute.ts";
 import userRoute from "./routes/student/userRole.ts";
 import studentsRoute from "./routes/student/students.ts";
+import teachersRoute from "./routes/teacher/teachers.ts";
 import studentRoute from "./routes/student/student.ts";
 import marksRoute from "./routes/student/marks.ts";
 import subjectsRoute from "./routes/subject/subjects.ts";
@@ -54,6 +55,7 @@ app.get("/", (req, res) => {
 app.use("/auth",             authRoute);
 app.use("/user",             userRoute);
 app.use("/students",         studentsRoute);
+app.use("/teachers",         teachersRoute);
 app.use("/student",          studentRoute);
 app.use("/marks",            marksRoute);
 app.use("/subjects",         subjectsRoute);
