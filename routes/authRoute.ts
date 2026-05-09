@@ -97,7 +97,7 @@ router.get(
       // SameSite=None + Secure works in both dev (browsers special-case
       // localhost) and prod (HTTPS), and is required when the FE is loaded
       // inside a third-party origin (cross-site requests).
-      res.cookie("accessToken", authToken, {
+      res.cookie("ticCampusAccessToken", authToken, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
