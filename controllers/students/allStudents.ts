@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
 import { setCacheHeaders } from "../shared.ts";
-import { getAllSubjects } from "../subjects/allSubjects.ts";
 
 type Student = {
   id: string;
@@ -13,7 +12,39 @@ type Student = {
   course: string;
 };
 
-export async function getAllStudents(request: Request, response: Response) {
+export async function getSubjectStudents(
+  request: Request<{ subject: string; course: string; year: string }>,
+  response: Response,
+) {
+  const { subject, course, year } = request.params;
+  const studentsQuery = await prisma.studentCourse.findMany({
+    where: {
+      course: {
+        name: course,
+        year: Number(year),
+        subjects: {
+          some: {
+            name: subject,
+          },
+        },
+      },
+    },
+    include: {
+      student: true,
+      course: true,
+    },
+  });
+  const students = studentsQuery.map((studentCourse) => ({
+    id: studentCourse.student.id,
+    name: studentCourse.student.name,
+    surname: studentCourse.student.surname,
+    year: studentCourse.course.year,
+    course: studentCourse.course.name,
+  }));
+  return response.status(200).send(students);
+}
+
+export async function getAllStudents(_request: Request, response: Response) {
   const studentsQuery = await prisma.studentCourse.findMany({
     include: {
       student: true,

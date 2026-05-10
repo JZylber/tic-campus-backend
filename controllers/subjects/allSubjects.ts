@@ -84,35 +84,38 @@ export async function getTemplateSubjects(
   return response.status(200).send(subjectsQuery);
 }
 
-export async function getSubjectStudents(
-  request: Request<{ subject: string; course: string; year: string }>,
+export async function getTeacherSubjects(
+  request: Request<{ teacherId: string }, {}, {}, {}>,
   response: Response,
 ) {
-  const { subject, course, year } = request.params;
-  const studentsQuery = await prisma.studentCourse.findMany({
+  const user = request.user as { id: number; role: string };
+  const teacherId =
+    user.role === "TEACHER" ? user.id : parseInt(request.params.teacherId);
+  const subjects = await prisma.subject.findMany({
     where: {
-      course: {
-        name: course,
-        year: Number(year),
-        subjects: {
-          some: {
-            name: subject,
-          },
+      teacherSubjects: {
+        some: {
+          teacherId: teacherId,
         },
       },
     },
-    include: {
-      student: true,
-      course: true,
+    select: {
+      name: true,
+      course: {
+        select: {
+          name: true,
+          year: true,
+        },
+      },
+      spreadsheetId: true,
     },
   });
-  // Map studentsQuery to an array of students with id, name, surname, year and course
-  const students = studentsQuery.map((studentCourse) => ({
-    id: studentCourse.student.id,
-    name: studentCourse.student.name,
-    surname: studentCourse.student.surname,
-    year: studentCourse.course.year,
-    course: studentCourse.course.name,
+  setCacheHeaders(response, 100);
+  const flattenedSubjects = subjects.map((subject) => ({
+    name: subject.name,
+    course: subject.course.name,
+    year: subject.course.year,
+    dataSheetId: subject.spreadsheetId,
   }));
-  return response.status(200).send(students);
+  return response.status(200).send(flattenedSubjects);
 }

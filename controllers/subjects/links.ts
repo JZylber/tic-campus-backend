@@ -59,34 +59,3 @@ export async function getHomeLinks(
     .send({ group: groupLink, presentation: presentationLink });
 }
 
-export async function getRedoLinks(
-  request: Request<{ subject: string; course: string; year: string }>,
-  response: Response,
-) {
-  // Get parameters from request parameters
-  const { subject, course, year } = request.params;
-  let spreadsheetId = "";
-  try {
-    spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
-  } catch (error) {
-    return response.status(404).send({ error: (error as Error).message });
-  }
-  const sheets = await getSheetClient();
-  const subjectTable = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "Materia!A:G",
-  });
-  const subjectData = asTableData(subjectTable.data.values!) as SubjectTable;
-  // Get redo links from subject data
-  const redoActivitiesLink = subjectData.find((s) => s.Materia === subject)?.[
-    "Reentrega Actividades"
-  ];
-  const redoTPsLink = subjectData.find((s) => s.Materia === subject)?.[
-    "Reentrega TPs"
-  ];
-  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to one day (86400 seconds)
-  setCacheHeaders(response, 86400);
-  return response
-    .status(200)
-    .send({ activities: redoActivitiesLink, markedActivities: redoTPsLink });
-}

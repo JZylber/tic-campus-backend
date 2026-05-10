@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { Role } from "../../generated/prisma/enums.ts";
-import { getAllStudents } from "../../controllers/students/allStudents.ts";
-import { getSubjectStudents } from "../../controllers/subjects/allSubjects.ts";
+import { getAllStudents, getSubjectStudents } from "../../controllers/students/allStudents.ts";
 import requireJwt from "../../middlewares/requireJWT.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
