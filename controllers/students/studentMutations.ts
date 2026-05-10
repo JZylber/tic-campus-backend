@@ -42,6 +42,26 @@ export async function changeStudentCourse(
   return response.status(200).send(updated);
 }
 
+export async function deleteStudentFromCourse(
+  request: Request<{ studentId: string; courseId: string }>,
+  response: Response,
+) {
+  const studentId = Number(request.params.studentId);
+  const courseId = Number(request.params.courseId);
+
+  const enrollment = await prisma.studentCourse.findFirst({
+    where: { studentId, courseId },
+  });
+  if (!enrollment) {
+    return response.status(404).send({ error: "Enrollment not found" });
+  }
+
+  const deleted = await prisma.studentCourse.delete({
+    where: { id: enrollment.id },
+  });
+  return response.status(200).send(deleted);
+}
+
 export async function updateStudent(
   request: Request<
     { studentId: string },

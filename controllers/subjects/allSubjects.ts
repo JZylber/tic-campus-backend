@@ -110,7 +110,6 @@ export async function getTeacherSubjects(
       spreadsheetId: true,
     },
   });
-  setCacheHeaders(response, 100);
   const flattenedSubjects = subjects.map((subject) => ({
     name: subject.name,
     course: subject.course.name,

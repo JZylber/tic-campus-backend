@@ -115,7 +115,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students (one entry per student). Each object includes `courses` (`id`/`course`/`year` per enrollment, where `id` equals the student's DNI for year 2025) and `subjects` (`subject`/`id_subject`/`id_course` for all subjects across all enrollments). Response is cached for 1 hour. |
+| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students (one entry per student). Each object includes the student's `id`, personal fields, `courses` (`courseId`/`course`/`year` per enrollment), and `subjects` (`subject`/`id_subject`/`id_course` for all subjects across all enrollments). Response is cached for 1 hour. |
 | `GET` | `/students/:subject/:course/:year` | — | Returns all students enrolled in a specific subject, course, and year with their personal details. |
 | `PATCH` | `/students/:studentId` | `ADMIN` | Updates a student's personal data. Accepts any subset of `name`, `surname`, `email`, `dni` in the request body. Returns the updated student. |
 | `POST` | `/students/:studentId/course` | `ADMIN` | Enrolls a student in a course. Body: `{ "courseId": number }`. Returns `409` if the student is already enrolled in that course. |

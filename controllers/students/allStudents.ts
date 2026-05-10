@@ -1,10 +1,9 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
-import { setCacheHeaders } from "../shared.ts";
 import { Role } from "../../generated/prisma/enums.ts";
 
 type StudentCourseEntry = {
-  id: string;
+  courseId: number;
   course: string;
   year: number;
 };
@@ -16,6 +15,7 @@ type SubjectEntry = {
 };
 
 type StudentResponse = {
+  id: number;
   name: string;
   surname: string;
   dni: string;
@@ -82,12 +82,13 @@ export async function getAllStudents(_request: Request, response: Response) {
     },
   });
   const students: StudentResponse[] = studentsQuery.map((user) => ({
+    id: user.id,
     name: user.name!,
     surname: user.surname!,
     dni: user.dni,
     email: user.email,
     courses: user.studentCourses.map(({ course }) => ({
-      id: course.year === 2025 ? user.dni : course.id.toString(),
+      courseId: course.id,
       course: course.name,
       year: course.year,
     })),
@@ -99,6 +100,5 @@ export async function getAllStudents(_request: Request, response: Response) {
       }))
     ),
   }));
-  setCacheHeaders(response, 3600);
   return response.status(200).send(students);
 }

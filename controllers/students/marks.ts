@@ -320,6 +320,5 @@ export async function getMarksBySubject(
       marksByStudent[activity.studentId]!.redoActivities.push(activity);
     }
   });
-  setCacheHeaders(response, 100);
   return response.status(200).send({ marksByStudent, criteria });
 }
