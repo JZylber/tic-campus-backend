@@ -1,5 +1,40 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
+import { setCacheHeaders } from "../shared.ts";
+
+export async function getRevisionRequests(
+  request: Request<
+    { course: string; year: string; subject: string; id: string },
+    {},
+    {},
+    {}
+  >,
+  response: Response,
+) {
+  const { subject, course, year, id } = request.params;
+  const pendingRequestIds = await prisma.revisionRequest
+    .findMany({
+      where: {
+        reviewed: false,
+        subject: {
+          name: subject,
+          course: {
+            name: course,
+            year: Number(year),
+          },
+        },
+        studentId: parseInt(id),
+      },
+      select: {
+        activityId: true,
+      },
+    })
+    .then((revisionRequests) =>
+      revisionRequests.map((request) => request.activityId.toString()),
+    );
+  setCacheHeaders(response, 100);
+  return response.status(200).send(pendingRequestIds);
+}
 
 export async function requestRevision(
   request: Request<
