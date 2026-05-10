@@ -21,9 +21,11 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 │   ├── authRoute.ts          # Google OAuth flow
 │   ├── student/
 │   │   ├── userInfo.ts       # Authenticated user info
-│   │   ├── students.ts       # Student list
+│   │   ├── students.ts       # Student list and mutations
 │   │   ├── student.ts        # Student lookup by name
 │   │   └── marks.ts          # Student and subject marks
+│   ├── course/
+│   │   └── courses.ts        # Course list
 │   ├── teacher/
 │   │   └── teachers.ts       # Teacher list
 │   ├── subject/
@@ -39,8 +41,11 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 ├── controllers/
 │   ├── students/
 │   │   ├── allStudents.ts
+│   │   ├── studentMutations.ts
 │   │   ├── auth.ts
 │   │   └── marks.ts
+│   ├── courses/
+│   │   └── allCourses.ts
 │   ├── teachers/
 │   │   └── allTeachers.ts
 │   ├── subjects/
@@ -100,12 +105,21 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 |---|---|---|---|
 | `GET` | `/user/info` | `JWT` | Returns the authenticated user's `id`, `name`, `surname`, and `role`. |
 
+### Courses — `/courses`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/courses` | — | Returns all courses (`id`, `name`, `specialty`, `year`). Response is cached for 1 hour. |
+
 ### Students — `/students`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students with their course information. Response is cached for 1 hour. |
+| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students (one entry per student). Each object includes the student's `id`, personal fields, `courses` (`courseId`/`course`/`year` per enrollment), and `subjects` (`subject`/`id_subject`/`id_course` for all subjects across all enrollments). Response is cached for 1 hour. |
 | `GET` | `/students/:subject/:course/:year` | — | Returns all students enrolled in a specific subject, course, and year with their personal details. |
+| `PATCH` | `/students/:studentId` | `ADMIN` | Updates a student's personal data. Accepts any subset of `name`, `surname`, `email`, `dni` in the request body. Returns the updated student. |
+| `POST` | `/students/:studentId/course` | `ADMIN` | Enrolls a student in a course. Body: `{ "courseId": number }`. Returns `409` if the student is already enrolled in that course. |
+| `PATCH` | `/students/:studentId/course` | `ADMIN` | Moves a student from one course to another. Body: `{ "oldCourseId": number, "newCourseId": number }`. Returns `404` if the enrollment does not exist. |
 
 ### Student — `/student`
 
