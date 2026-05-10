@@ -104,7 +104,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students with their course information. Response is cached for 1 hour. |
+| `GET` | `/students` | `ADMIN / TEACHER` | Returns all students (one entry per student). Each object includes `courses` (`id`/`course`/`year` per enrollment, where `id` equals the student's DNI for year 2025) and `subjects` (`subject`/`id_subject`/`id_course` for all subjects across all enrollments). Response is cached for 1 hour. |
 | `GET` | `/students/:subject/:course/:year` | — | Returns all students enrolled in a specific subject, course, and year with their personal details. |
 
 ### Student — `/student`
