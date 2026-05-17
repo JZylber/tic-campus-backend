@@ -62,9 +62,13 @@ router.get("/google", (req: Request, res: Response, next: NextFunction) => {
   const authenticator = returnTo
     ? passport.authenticate("google", {
         scope: ["profile", "email"],
+        prompt: "select_account",
         state: encodeState(returnTo),
       })
-    : passport.authenticate("google", { scope: ["profile", "email"] });
+    : passport.authenticate("google", {
+        scope: ["profile", "email"],
+        prompt: "select_account",
+      });
 
   return authenticator(req, res, next);
 });
