@@ -1,7 +1,6 @@
 import "./loadEnv.ts";
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 
 import authRoute from "./routes/authRoute.ts";
 import userRoute from "./routes/student/userInfo.ts";
@@ -22,7 +21,6 @@ const app = express();
 const PORT = process.env.PORT;
 
 app.use(express.json());
-app.use(cookieParser());
 
 const toOrigin = (url: string | undefined): string | null => {
   if (!url) return null;

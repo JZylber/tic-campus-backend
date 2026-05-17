@@ -94,19 +94,23 @@ router.get(
         { expiresIn: "1d" },
       );
 
-      // SameSite=None + Secure works in both dev (browsers special-case
-      // localhost) and prod (HTTPS), and is required when the FE is loaded
-      // inside a third-party origin (cross-site requests).
-      res.cookie("ticCampusAccessToken", authToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 24 * 60 * 60 * 1000,
-      });
-
+      // Token is delivered in the URL fragment rather than a cookie so the FE
+      // (different registrable domain, hosted on GitHub Pages) can authenticate
+      // in browsers that partition third-party cookies (Firefox TCP, Zen).
+      // Fragments are never sent to servers, so the JWT stays out of access logs.
       const returnTo = decodeReturnTo(req.query.state);
-      const redirectUrl = returnTo ?? process.env.FE_BASE_URL ?? "/";
-      return res.redirect(redirectUrl);
+      const redirectBase = returnTo ?? process.env.FE_BASE_URL;
+      if (!redirectBase) {
+        return res
+          .status(500)
+          .json({ message: "FE_BASE_URL is not configured" });
+      }
+
+      const target = new URL(redirectBase);
+      const hashParams = new URLSearchParams(target.hash.replace(/^#/, ""));
+      hashParams.set("token", authToken);
+      target.hash = hashParams.toString();
+      return res.redirect(target.toString());
     } catch (error) {
       return res
         .status(500)
