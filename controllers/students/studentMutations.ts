@@ -17,8 +17,13 @@ export async function addStudentToCourse(
 
   const studentCourse = await prisma.studentCourse.create({
     data: { studentId, courseId },
+    include: { course: true },
   });
-  return response.status(201).send(studentCourse);
+  return response.status(201).send({
+    courseId: studentCourse.course.id,
+    course: studentCourse.course.name,
+    year: studentCourse.course.year,
+  });
 }
 
 export async function changeStudentCourse(
@@ -38,8 +43,13 @@ export async function changeStudentCourse(
   const updated = await prisma.studentCourse.update({
     where: { id: enrollment.id },
     data: { courseId: newCourseId },
+    include: { course: true },
   });
-  return response.status(200).send(updated);
+  return response.status(200).send({
+    courseId: updated.course.id,
+    course: updated.course.name,
+    year: updated.course.year,
+  });
 }
 
 export async function deleteStudentFromCourse(
