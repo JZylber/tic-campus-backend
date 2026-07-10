@@ -19,6 +19,11 @@ enum Role {
   STUDENT
 }
 
+enum OfferingKind {
+  MANDATORY
+  OPTIONAL
+}
+
 // Define your database models here
 
 model User {
@@ -32,19 +37,7 @@ model User {
   role            Role              @default(STUDENT)
   studentCourses  StudentCourse[]
   redos           RevisionRequest[]
-  teacherSubjects TeacherSubject[]
-}
-
-model Subject {
-  id              Int               @id @default(autoincrement())
-  name            String
-  spreadsheetId   String?
-  templateId      String
-  marks           Boolean           @default(false)
-  courseId        Int
-  course          Course            @relation(fields: [courseId], references: [id])
-  redos           RevisionRequest[]
-  teacherSubjects TeacherSubject[]
+  teacherOfferings TeacherOffering[]
 }
 
 model StudentCourse {
@@ -53,14 +46,9 @@ model StudentCourse {
   studentId Int
   courseId  Int
   course    Course @relation(fields: [courseId], references: [id])
-}
+  studentOfferings StudentOffering[]
 
-model TeacherSubject {
-  id        Int     @id @default(autoincrement())
-  teacher   User    @relation(fields: [teacherId], references: [id])
-  teacherId Int
-  subject   Subject @relation(fields: [subjectId], references: [id])
-  subjectId Int
+  @@unique([studentId, courseId])
 }
 
 model Course {
@@ -68,20 +56,89 @@ model Course {
   name      String
   specialty String
   year      Int
-  subjects  Subject[]
   students  StudentCourse[]
+  offeringCourses  OfferingCourse[]
+  revisionRequests RevisionRequest[]
+
+  @@unique([name, year])
 }
 
 model RevisionRequest {
   id         Int      @id @default(autoincrement())
   student    User     @relation(fields: [studentId], references: [id])
   studentId  Int
-  subject    Subject  @relation(fields: [subjectId], references: [id])
-  subjectId  Int
+  offering   Offering @relation(fields: [offeringId], references: [id])
+  offeringId Int
+  course     Course   @relation(fields: [courseId], references: [id])
+  courseId   Int
   activityId String
   reason     String
   bonusTasks String?
   comment    String?
   date       DateTime
   reviewed   Boolean  @default(false)
+}
+
+// ---------------------------------------------------------------------------
+// Refactor model: abstract Subject + Offering + M2M OfferingCourse + enrollment.
+// The abstract subject (name/marks) is separate from its concrete Offering
+// (spreadsheet/template/course). Membership: MANDATORY is derived via the
+// `enrollment` SQL view; OPTIONAL is stored in StudentOffering (composite-FK gated).
+// ---------------------------------------------------------------------------
+
+model Subject {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  specialty String?
+  marks     Boolean    @default(false)
+  offerings Offering[]
+}
+
+model Offering {
+  id            Int          @id @default(autoincrement())
+  subject       Subject      @relation(fields: [subjectId], references: [id])
+  subjectId     Int
+  templateId    String
+  spreadsheetId String?
+  kind          OfferingKind @default(MANDATORY)
+  year          Int
+  offeringCourses  OfferingCourse[]
+  teacherOfferings TeacherOffering[]
+  redos            RevisionRequest[]
+}
+
+model OfferingCourse {
+  id              Int      @id @default(autoincrement())
+  offering        Offering @relation(fields: [offeringId], references: [id])
+  offeringId      Int
+  course          Course   @relation(fields: [courseId], references: [id])
+  courseId        Int
+  legacySubjectId Int?     @unique
+  studentOfferings StudentOffering[]
+
+  @@unique([offeringId, courseId])
+}
+
+model TeacherOffering {
+  id         Int      @id @default(autoincrement())
+  teacher    User     @relation(fields: [teacherId], references: [id])
+  teacherId  Int
+  offering   Offering @relation(fields: [offeringId], references: [id])
+  offeringId Int
+
+  @@unique([teacherId, offeringId])
+}
+
+// Enrollment for OPTIONAL offerings (MANDATORY membership is derived via the
+// `enrollment` SQL view). The two composite FKs make an enrollment impossible
+// unless the student is really in that course AND the offering serves it.
+model StudentOffering {
+  id          Int            @id @default(autoincrement())
+  studentId   Int
+  courseId    Int
+  offeringId  Int
+  enrolledVia StudentCourse  @relation(fields: [studentId, courseId], references: [studentId, courseId])
+  eligible    OfferingCourse @relation(fields: [offeringId, courseId], references: [offeringId, courseId])
+
+  @@unique([studentId, offeringId])
 }

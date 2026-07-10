@@ -42,5 +42,8 @@
     "skipLibCheck": true,
 
     "rewriteRelativeImportExtensions": true
-  }
+  },
+  // One-off migration/verification scripts are run directly with tsx and are
+  // not part of the server build output.
+  "exclude": ["scripts", "dist"]
 }

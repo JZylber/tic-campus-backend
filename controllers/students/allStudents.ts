@@ -34,9 +34,13 @@ export async function getSubjectStudents(
       course: {
         name: course,
         year: Number(year),
-        subjects: {
+        offeringCourses: {
           some: {
-            name: subject,
+            offering: {
+              subject: {
+                name: subject,
+              },
+            },
           },
         },
       },
@@ -72,8 +76,13 @@ export async function getAllStudents(_request: Request, response: Response) {
               id: true,
               name: true,
               year: true,
-              subjects: {
-                select: { id: true, name: true, courseId: true },
+              offeringCourses: {
+                orderBy: { legacySubjectId: "asc" },
+                select: {
+                  legacySubjectId: true,
+                  courseId: true,
+                  offering: { select: { subject: { select: { name: true } } } },
+                },
               },
             },
           },
@@ -93,10 +102,10 @@ export async function getAllStudents(_request: Request, response: Response) {
       year: course.year,
     })),
     subjects: user.studentCourses.flatMap(({ course }) =>
-      course.subjects.map((subject) => ({
-        subject: subject.name,
-        id_subject: subject.id,
-        id_course: subject.courseId,
+      course.offeringCourses.map((oc) => ({
+        subject: oc.offering.subject.name,
+        id_subject: oc.legacySubjectId!,
+        id_course: oc.courseId,
       }))
     ),
   }));

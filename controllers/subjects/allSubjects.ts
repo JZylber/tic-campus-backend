@@ -11,35 +11,28 @@ type Subject = {
 };
 
 export async function getAllSubjects(request: Request, response: Response) {
-  // Select subjects where course is not empty, and order by year desc, name asc and course asc
-  const subjectsQuery = await prisma.subject.findMany({
+  // One row per (subject, course) pair. OfferingCourse is exactly that grain,
+  // so ordering happens in the DB (same collation as before) — year desc,
+  // subject name asc, course name asc.
+  const offeringCourses = await prisma.offeringCourse.findMany({
     include: {
       course: true,
+      offering: { include: { subject: true } },
     },
     orderBy: [
-      {
-        course: {
-          year: "desc",
-        },
-      },
-      {
-        name: "asc",
-      },
-      {
-        course: {
-          name: "asc",
-        },
-      },
+      { course: { year: "desc" } },
+      { offering: { subject: { name: "asc" } } },
+      { course: { name: "asc" } },
     ],
   });
-  const subjects: Subject[] = subjectsQuery.map((subject) => ({
-    name: subject.name,
-    course: subject.course.name,
-    level: Number(subject.course.name[2] || 0),
-    division: subject.course.name[3] || "",
-    year: subject.course.year,
-    template: subject.templateId,
-    spreadsheetId: subject.spreadsheetId,
+  const subjects: Subject[] = offeringCourses.map((oc) => ({
+    name: oc.offering.subject.name,
+    course: oc.course.name,
+    level: Number(oc.course.name[2] || 0),
+    division: oc.course.name[3] || "",
+    year: oc.course.year,
+    template: oc.offering.templateId,
+    spreadsheetId: oc.offering.spreadsheetId,
   }));
   return response.status(200).send(subjects);
 }
@@ -49,35 +42,31 @@ export async function getTemplateSubjects(
   response: Response,
 ) {
   const { templateId } = request.params;
-  // Select subjects where course is not empty and templateId matches. Order by year desc, name asc and course asc
-  const subjectsQuery = (
-    await prisma.subject.findMany({
-      where: {
-        templateId,
-      },
-      orderBy: [
-        {
-          course: {
-            year: "desc",
-          },
-        },
-        {
-          name: "asc",
-        },
-        {
-          course: {
-            name: "asc",
-          },
-        },
-      ],
-      include: {
-        course: true,
-      },
-    })
-  ).map((subject) => ({
-    ...subject,
-    course: subject.course.name,
-    year: subject.course.year,
+  // Offerings using this template, exploded per course. Object keys are built in
+  // the exact legacy Subject column order to keep the response byte-identical.
+  const offeringCourses = await prisma.offeringCourse.findMany({
+    where: {
+      offering: { templateId },
+    },
+    orderBy: [
+      { course: { year: "desc" } },
+      { offering: { subject: { name: "asc" } } },
+      { course: { name: "asc" } },
+    ],
+    include: {
+      course: true,
+      offering: { include: { subject: true } },
+    },
+  });
+  const subjectsQuery = offeringCourses.map((oc) => ({
+    id: oc.legacySubjectId,
+    name: oc.offering.subject.name,
+    spreadsheetId: oc.offering.spreadsheetId,
+    templateId: oc.offering.templateId,
+    marks: oc.offering.subject.marks,
+    courseId: oc.courseId,
+    course: oc.course.name,
+    year: oc.course.year,
   }));
   // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to one hour (3600 seconds)
   setCacheHeaders(response, 3600);
@@ -91,30 +80,37 @@ export async function getTeacherSubjects(
   const user = request.user as { id: number; role: string };
   const teacherId =
     user.role === "TEACHER" ? user.id : parseInt(request.params.teacherId);
-  const subjects = await prisma.subject.findMany({
+  const offeringCourses = await prisma.offeringCourse.findMany({
     where: {
-      teacherSubjects: {
-        some: {
-          teacherId: teacherId,
+      offering: {
+        teacherOfferings: {
+          some: {
+            teacherId: teacherId,
+          },
         },
       },
     },
+    orderBy: { legacySubjectId: "asc" },
     select: {
-      name: true,
       course: {
         select: {
           name: true,
           year: true,
         },
       },
-      spreadsheetId: true,
+      offering: {
+        select: {
+          spreadsheetId: true,
+          subject: { select: { name: true } },
+        },
+      },
     },
   });
-  const flattenedSubjects = subjects.map((subject) => ({
-    name: subject.name,
-    course: subject.course.name,
-    year: subject.course.year,
-    dataSheetId: subject.spreadsheetId,
+  const flattenedSubjects = offeringCourses.map((oc) => ({
+    name: oc.offering.subject.name,
+    course: oc.course.name,
+    year: oc.course.year,
+    dataSheetId: oc.offering.spreadsheetId,
   }));
   return response.status(200).send(flattenedSubjects);
 }

@@ -16,12 +16,14 @@ export async function getRevisionRequests(
     .findMany({
       where: {
         reviewed: false,
-        subject: {
-          name: subject,
-          course: {
-            name: course,
-            year: Number(year),
+        offering: {
+          subject: {
+            name: subject,
           },
+        },
+        course: {
+          name: course,
+          year: Number(year),
         },
         studentId: parseInt(id),
       },
@@ -86,12 +88,14 @@ export async function requestRevision(
   const existingRevisionRequests = (
     await prisma.revisionRequest.findMany({
       where: {
-        subject: {
-          name: subject,
-          course: {
-            name: course,
-            year: Number(year),
+        offering: {
+          subject: {
+            name: subject,
           },
+        },
+        course: {
+          name: course,
+          year: Number(year),
         },
         studentId: {
           in: studentIds.map((id) => parseInt(id)),
@@ -105,11 +109,6 @@ export async function requestRevision(
             id: true,
             name: true,
             surname: true,
-          },
-        },
-        subject: {
-          select: {
-            id: true,
           },
         },
       },
@@ -126,25 +125,28 @@ export async function requestRevision(
       message: `Ya existe una solicitud de reentrega para esta actividad que no ha sido revisada aún de los siguientes estudiantes: ${studentNames}`,
     });
   }
-  // Create revision request for each student
-  // Get subjectCourseId
-  const subjectId = await prisma.subject
-    .findFirst({
-      where: {
-        name: subject,
-        course: {
-          name: course,
-          year: Number(year),
-        },
+  // Create revision request for each student.
+  // Resolve the offering for this subject on the given course/year, and the
+  // exact course it is linked to (authoritative even if course names collide).
+  const offering = await prisma.offering.findFirst({
+    where: {
+      subject: { name: subject },
+      offeringCourses: { some: { course: { name: course, year: Number(year) } } },
+    },
+    select: {
+      id: true,
+      offeringCourses: {
+        where: { course: { name: course, year: Number(year) } },
+        select: { courseId: true },
       },
-      select: {
-        id: true,
-      },
-    })
-    .then((subject) => subject!.id);
+    },
+  });
+  const offeringId = offering!.id;
+  const courseId = offering!.offeringCourses[0]!.courseId;
   const revisionData = studentIds.map((id) => ({
     studentId: parseInt(id),
-    subjectId,
+    offeringId,
+    courseId,
     activityId,
     reason,
     bonusTasks: bonusTasks || null,
@@ -169,17 +171,19 @@ export async function getRevisionRequestsByTeacher(
     user.role === "TEACHER" ? user.id : parseInt(request.params.teacherId);
   const revisionRequests = await prisma.revisionRequest.findMany({
     where: {
-      subject: {
-        course: {
-          year: parseInt(year),
-        },
-        teacherSubjects: {
+      offering: {
+        year: parseInt(year),
+        teacherOfferings: {
           some: {
             teacherId: teacherId,
           },
         },
       },
     },
+    // Deterministic ordering (the legacy query had none, so its order was
+    // plan-dependent). courseName/courseYear now come from the request's own
+    // course (the specific cohort), correct even when an offering spans courses.
+    orderBy: { id: "asc" },
     select: {
       id: true,
       student: {
@@ -189,15 +193,15 @@ export async function getRevisionRequestsByTeacher(
           surname: true,
         },
       },
-      subject: {
+      offering: {
+        select: {
+          subject: { select: { name: true } },
+        },
+      },
+      course: {
         select: {
           name: true,
-          course: {
-            select: {
-              name: true,
-              year: true,
-            },
-          },
+          year: true,
         },
       },
       activityId: true,
@@ -214,9 +218,9 @@ export async function getRevisionRequestsByTeacher(
     studentId: request.student.id,
     studentName: request.student.name,
     studentSurname: request.student.surname,
-    subjectName: request.subject.name,
-    courseName: request.subject.course.name,
-    courseYear: request.subject.course.year,
+    subjectName: request.offering!.subject.name,
+    courseName: request.course!.name,
+    courseYear: request.course!.year,
     activityId: request.activityId,
     reason: request.reason,
     bonusTasks: request.bonusTasks,

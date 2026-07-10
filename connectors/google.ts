@@ -61,12 +61,20 @@ export async function getSpreadsheetId(
   course: string,
   year: number,
 ) {
-  const spreadsheetId = await prisma.subject.findFirst({
+  // Resolve the Offering for this subject on the given course/year.
+  // (Post-refactor: an Offering can span multiple courses via OfferingCourse.)
+  const spreadsheetId = await prisma.offering.findFirst({
     where: {
-      name: subject,
-      course: {
-        name: course,
-        year,
+      subject: {
+        name: subject,
+      },
+      offeringCourses: {
+        some: {
+          course: {
+            name: course,
+            year,
+          },
+        },
       },
     },
     select: {
