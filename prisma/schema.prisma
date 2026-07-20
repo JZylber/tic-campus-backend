@@ -113,7 +113,6 @@ model OfferingCourse {
   offeringId      Int
   course          Course   @relation(fields: [courseId], references: [id])
   courseId        Int
-  legacySubjectId Int?     @unique
   studentOfferings StudentOffering[]
 
   @@unique([offeringId, courseId])

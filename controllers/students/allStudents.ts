@@ -10,7 +10,6 @@ type StudentCourseEntry = {
 
 type SubjectEntry = {
   subject: string;
-  id_subject: number;
   id_course: number;
 };
 
@@ -77,9 +76,8 @@ export async function getAllStudents(_request: Request, response: Response) {
               name: true,
               year: true,
               offeringCourses: {
-                orderBy: { legacySubjectId: "asc" },
+                orderBy: { offering: { subject: { name: "asc" } } },
                 select: {
-                  legacySubjectId: true,
                   courseId: true,
                   offering: { select: { subject: { select: { name: true } } } },
                 },
@@ -104,7 +102,6 @@ export async function getAllStudents(_request: Request, response: Response) {
     subjects: user.studentCourses.flatMap(({ course }) =>
       course.offeringCourses.map((oc) => ({
         subject: oc.offering.subject.name,
-        id_subject: oc.legacySubjectId!,
         id_course: oc.courseId,
       }))
     ),

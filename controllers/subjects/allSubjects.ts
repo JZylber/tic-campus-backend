@@ -42,8 +42,7 @@ export async function getTemplateSubjects(
   response: Response,
 ) {
   const { templateId } = request.params;
-  // Offerings using this template, exploded per course. Object keys are built in
-  // the exact legacy Subject column order to keep the response byte-identical.
+  // Offerings using this template, exploded per course.
   const offeringCourses = await prisma.offeringCourse.findMany({
     where: {
       offering: { templateId },
@@ -59,7 +58,6 @@ export async function getTemplateSubjects(
     },
   });
   const subjectsQuery = offeringCourses.map((oc) => ({
-    id: oc.legacySubjectId,
     name: oc.offering.subject.name,
     spreadsheetId: oc.offering.spreadsheetId,
     templateId: oc.offering.templateId,
@@ -90,7 +88,11 @@ export async function getTeacherSubjects(
         },
       },
     },
-    orderBy: { legacySubjectId: "asc" },
+    orderBy: [
+      { course: { year: "desc" } },
+      { offering: { subject: { name: "asc" } } },
+      { course: { name: "asc" } },
+    ],
     select: {
       course: {
         select: {
