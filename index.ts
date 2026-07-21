@@ -16,6 +16,7 @@ import revisionRequestsRoute from "./routes/revision/revisionRequests.ts";
 import revisionRequestRoute from "./routes/revision/revisionRequest.ts";
 import calendarRoute from "./routes/project/calendar.ts";
 import coursesRoute from "./routes/course/courses.ts";
+import offeringTimeSlotsRoute from "./routes/offering/timeSlots.ts";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -65,6 +66,7 @@ app.use("/revisionRequests", revisionRequestsRoute);
 app.use("/revisionRequest",  revisionRequestRoute);
 app.use("/calendar",         calendarRoute);
 app.use("/courses",          coursesRoute);
+app.use("/offerings",        offeringTimeSlotsRoute);
 
 app
   .listen(PORT, () => {
