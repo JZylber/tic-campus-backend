@@ -24,6 +24,14 @@ enum OfferingKind {
   OPTIONAL
 }
 
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
 // Define your database models here
 
 model User {
@@ -105,6 +113,18 @@ model Offering {
   offeringCourses  OfferingCourse[]
   teacherOfferings TeacherOffering[]
   redos            RevisionRequest[]
+  timeSlots        OfferingTimeSlot[]
+}
+
+model OfferingTimeSlot {
+  id         Int      @id @default(autoincrement())
+  offering   Offering @relation(fields: [offeringId], references: [id])
+  offeringId Int
+  day        Weekday
+  slot       Int
+  classroom  String?
+
+  @@unique([offeringId, day, slot])
 }
 
 model OfferingCourse {
