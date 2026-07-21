@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
 import {
   buildDisplayName,
+  composeSubjectName,
   levelFromCourses,
   countCoursesForLevelYear,
 } from "./optionalOfferingQueries.ts";
@@ -46,26 +47,6 @@ function validateCourseSet(
   return null;
 }
 
-async function findConflictingCourses(
-  courseIds: number[],
-  subjectId: number,
-  year: number,
-  excludeOfferingId?: number,
-) {
-  const conflicts = await prisma.offeringCourse.findMany({
-    where: {
-      courseId: { in: courseIds },
-      offering: {
-        subjectId,
-        year,
-        ...(excludeOfferingId ? { id: { not: excludeOfferingId } } : {}),
-      },
-    },
-    include: { course: true },
-  });
-  return conflicts;
-}
-
 export async function createOptionalOffering(
   request: Request<
     {},
@@ -76,11 +57,12 @@ export async function createOptionalOffering(
       courseIds: number[];
       templateId?: string;
       spreadsheetId?: string | null;
+      name?: string | null;
     }
   >,
   response: Response,
 ) {
-  const { subjectId, courseIds, templateId, spreadsheetId } = request.body;
+  const { subjectId, courseIds, templateId, spreadsheetId, name } = request.body;
   const yearInput = request.body.year;
 
   if (!isPositiveInt(subjectId)) {
@@ -97,6 +79,9 @@ export async function createOptionalOffering(
   }
   if (!isOptionalNullableString(spreadsheetId)) {
     return response.status(400).send({ error: "Invalid spreadsheetId" });
+  }
+  if (!isOptionalNullableString(name)) {
+    return response.status(400).send({ error: "Invalid name" });
   }
 
   const year = yearInput ?? new Date().getFullYear();
@@ -117,13 +102,6 @@ export async function createOptionalOffering(
     return response.status(400).send(courseSetError);
   }
 
-  const conflicts = await findConflictingCourses(uniqueCourseIds, subjectId, year);
-  if (conflicts.length) {
-    return response.status(409).send({
-      error: `Subject already offered to: ${conflicts.map((c) => c.course.name).join(", ")}`,
-    });
-  }
-
   const offering = await prisma.$transaction(async (tx) => {
     const created = await tx.offering.create({
       data: {
@@ -132,6 +110,7 @@ export async function createOptionalOffering(
         kind: "OPTIONAL",
         templateId: templateId ?? "",
         spreadsheetId: spreadsheetId ?? null,
+        name: name ?? null,
       },
     });
     await tx.offeringCourse.createMany({
@@ -147,11 +126,16 @@ export async function createOptionalOffering(
     id: offering.id,
     subjectId: offering.subjectId,
     subjectName: subject.name,
+    name: offering.name,
     year: offering.year,
     level,
     templateId: offering.templateId,
     spreadsheetId: offering.spreadsheetId,
-    displayName: buildDisplayName(subject.name, offeringCourses, totalForLevel),
+    displayName: buildDisplayName(
+      composeSubjectName(subject.name, offering.name),
+      offeringCourses,
+      totalForLevel,
+    ),
     courses: courses.map((course) => ({
       courseId: course.id,
       courseName: course.name,
@@ -164,12 +148,17 @@ export async function updateOptionalOffering(
   request: Request<
     { id: string },
     {},
-    { courseIds?: number[]; templateId?: string; spreadsheetId?: string | null }
+    {
+      courseIds?: number[];
+      templateId?: string;
+      spreadsheetId?: string | null;
+      name?: string | null;
+    }
   >,
   response: Response,
 ) {
   const id = Number(request.params.id);
-  const { courseIds, templateId, spreadsheetId } = request.body;
+  const { courseIds, templateId, spreadsheetId, name } = request.body;
 
   if (!isPositiveInt(id)) {
     return response.status(400).send({ error: "Invalid offering id" });
@@ -182,6 +171,9 @@ export async function updateOptionalOffering(
   }
   if (!isOptionalNullableString(spreadsheetId)) {
     return response.status(400).send({ error: "Invalid spreadsheetId" });
+  }
+  if (!isOptionalNullableString(name)) {
+    return response.status(400).send({ error: "Invalid name" });
   }
 
   const existing = await prisma.offering.findUnique({
@@ -211,15 +203,6 @@ export async function updateOptionalOffering(
     toAdd = uniqueCourseIds.filter((cid) => !existingCourseIds.includes(cid));
     toRemove = existingCourseIds.filter((cid) => !uniqueCourseIds.includes(cid));
 
-    if (toAdd.length) {
-      const conflicts = await findConflictingCourses(toAdd, existing.subjectId, existing.year, id);
-      if (conflicts.length) {
-        return response.status(409).send({
-          error: `Subject already offered to: ${conflicts.map((c) => c.course.name).join(", ")}`,
-        });
-      }
-    }
-
     if (toRemove.length) {
       const enrolled = await prisma.studentOffering.findMany({
         where: { offeringId: id, courseId: { in: toRemove } },
@@ -244,8 +227,8 @@ export async function updateOptionalOffering(
       });
     }
     const updateData = Object.fromEntries(
-      Object.entries({ templateId, spreadsheetId }).filter(([, v]) => v !== undefined),
-    ) as { templateId?: string; spreadsheetId?: string | null };
+      Object.entries({ templateId, spreadsheetId, name }).filter(([, v]) => v !== undefined),
+    ) as { templateId?: string; spreadsheetId?: string | null; name?: string | null };
     if (Object.keys(updateData).length) {
       await tx.offering.update({ where: { id }, data: updateData });
     }
@@ -262,11 +245,16 @@ export async function updateOptionalOffering(
     id: updated.id,
     subjectId: updated.subjectId,
     subjectName: updated.subject.name,
+    name: updated.name,
     year: updated.year,
     level,
     templateId: updated.templateId,
     spreadsheetId: updated.spreadsheetId,
-    displayName: buildDisplayName(updated.subject.name, updated.offeringCourses, totalForLevel),
+    displayName: buildDisplayName(
+      composeSubjectName(updated.subject.name, updated.name),
+      updated.offeringCourses,
+      totalForLevel,
+    ),
     courses: updated.offeringCourses.map((oc) => ({
       courseId: oc.courseId,
       courseName: oc.course.name,

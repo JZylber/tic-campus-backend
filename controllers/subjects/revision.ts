@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
 import { setCacheHeaders } from "../shared.ts";
+import { composeSubjectName } from "../offerings/optionalOfferingQueries.ts";
 
 export async function getRevisionRequests(
   request: Request<
@@ -195,6 +196,7 @@ export async function getRevisionRequestsByTeacher(
       },
       offering: {
         select: {
+          name: true,
           subject: { select: { name: true } },
         },
       },
@@ -218,7 +220,7 @@ export async function getRevisionRequestsByTeacher(
     studentId: request.student.id,
     studentName: request.student.name,
     studentSurname: request.student.surname,
-    subjectName: request.offering!.subject.name,
+    subjectName: composeSubjectName(request.offering!.subject.name, request.offering!.name),
     courseName: request.course!.name,
     courseYear: request.course!.year,
     activityId: request.activityId,

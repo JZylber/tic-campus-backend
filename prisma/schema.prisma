@@ -108,6 +108,7 @@ model Offering {
   subjectId     Int
   templateId    String
   spreadsheetId String?
+  name          String?
   kind          OfferingKind @default(MANDATORY)
   year          Int
   offeringCourses  OfferingCourse[]

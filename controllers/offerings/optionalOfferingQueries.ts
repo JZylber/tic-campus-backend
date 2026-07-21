@@ -25,6 +25,18 @@ export function buildDisplayName(
   return divisions.length ? `${subjectName} (${divisions.join("")})` : subjectName;
 }
 
+// Composes the display-facing subject name with its offering's name, when
+// set, to disambiguate multiple offerings of the same subject (e.g. two
+// different optional variants). Only safe to use where the result is pure
+// display — never as a lookup key, since Subject.name alone is what's
+// matched against elsewhere (marks/articles/material/links/routing).
+export function composeSubjectName(
+  subjectName: string,
+  offeringName: string | null | undefined,
+): string {
+  return offeringName ? `${subjectName}-${offeringName}` : subjectName;
+}
+
 export function levelFromCourses(offeringCourses: OfferingCourseWithCourse[]): number {
   const first = offeringCourses[0];
   return first ? Number(first.course.name[2] || 0) : 0;
@@ -67,12 +79,13 @@ export async function listOptionalOfferings(request: Request, response: Response
       id: offering.id,
       subjectId: offering.subjectId,
       subjectName: offering.subject.name,
+      name: offering.name,
       year: offering.year,
       level,
       templateId: offering.templateId,
       spreadsheetId: offering.spreadsheetId,
       displayName: buildDisplayName(
-        offering.subject.name,
+        composeSubjectName(offering.subject.name, offering.name),
         offering.offeringCourses,
         levelCounts.get(level) ?? 0,
       ),
