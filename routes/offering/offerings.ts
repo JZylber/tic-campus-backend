@@ -3,6 +3,7 @@ import { Role } from "../../generated/prisma/enums.ts";
 import {
   listOfferings,
   listSubjectsCatalog,
+  getPublicOfferingsBySubjectLevel,
 } from "../../controllers/offerings/offeringQueries.ts";
 import {
   createOffering,
@@ -16,6 +17,7 @@ const router: Router = Router();
 
 router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), listOfferings);
 router.get("/subjects", requireJwt, requireRole([Role.ADMIN]), listSubjectsCatalog);
+router.get("/:subject/:year/:level/:studentId", getPublicOfferingsBySubjectLevel);
 router.post("/", requireJwt, requireRole([Role.ADMIN]), createOffering);
 router.patch("/:id", requireJwt, requireRole([Role.ADMIN]), updateOffering);
 router.delete("/:id", requireJwt, requireRole([Role.ADMIN]), deleteOffering);

@@ -57,6 +57,14 @@ export async function countCoursesByLevel(year: number): Promise<Map<number, num
   return counts;
 }
 
+export async function courseIdsForLevel(year: number, level: number): Promise<number[]> {
+  const courses = await prisma.course.findMany({
+    where: { year },
+    select: { id: true, name: true },
+  });
+  return courses.filter((c) => Number(c.name[2] || 0) === level).map((c) => c.id);
+}
+
 // Lists offerings of any kind (MANDATORY or OPTIONAL) for a year, with
 // their time slots included — the data source for the admin timetable
 // editor, which needs to schedule the regular curriculum, not just
@@ -119,4 +127,87 @@ export async function listSubjectsCatalog(_request: Request, response: Response)
     orderBy: { name: "asc" },
   });
   return response.status(200).send(subjects);
+}
+
+// Public (no auth) counterpart of listOfferings, scoped to one subject and
+// level rather than an admin-wide year catalog — used by the public
+// student-facing Proyecto timetable page, which has no JWT to gate on.
+// studentId is tolerated loosely (like getStudentMarks): an invalid/unknown
+// id simply yields no enrollments rather than an error.
+export async function getPublicOfferingsBySubjectLevel(
+  request: Request<{ subject: string; year: string; level: string; studentId: string }>,
+  response: Response,
+) {
+  const { subject, year: yearParam, level: levelParam, studentId: studentIdParam } = request.params;
+  const year = Number(yearParam);
+  const level = Number(levelParam);
+  const studentId = Number(studentIdParam);
+
+  if (!Number.isInteger(year) || !Number.isInteger(level)) {
+    return response.status(400).send({ message: "Invalid year or level" });
+  }
+
+  const courseIds = await courseIdsForLevel(year, level);
+
+  const [offerings, levelCounts] = await Promise.all([
+    prisma.offering.findMany({
+      where: {
+        year,
+        subject: { name: subject },
+        offeringCourses: { some: { courseId: { in: courseIds } } },
+      },
+      include: {
+        subject: true,
+        offeringCourses: { include: { course: true } },
+        timeSlots: true,
+      },
+    }),
+    countCoursesByLevel(year),
+  ]);
+
+  const enrolledIds = Number.isInteger(studentId)
+    ? new Set(
+        (
+          await prisma.studentOffering.findMany({
+            where: { studentId, offeringId: { in: offerings.map((o) => o.id) } },
+            select: { offeringId: true },
+          })
+        ).map((r) => r.offeringId),
+      )
+    : new Set<number>();
+
+  const result = offerings.map((offering) => {
+    const offeringLevel = levelFromCourses(offering.offeringCourses);
+    return {
+      id: offering.id,
+      subjectId: offering.subjectId,
+      subjectName: offering.subject.name,
+      name: offering.name,
+      kind: offering.kind,
+      year: offering.year,
+      level: offeringLevel,
+      templateId: offering.templateId,
+      spreadsheetId: offering.spreadsheetId,
+      semester: offering.semester,
+      displayName: buildDisplayName(
+        composeSubjectName(offering.subject.name, offering.name),
+        offering.offeringCourses,
+        levelCounts.get(offeringLevel) ?? 0,
+      ),
+      courses: offering.offeringCourses.map((oc) => ({
+        courseId: oc.courseId,
+        courseName: oc.course.name,
+        division: oc.course.name[3] || "",
+      })),
+      timeSlots: offering.timeSlots.map((s) => ({
+        id: s.id,
+        day: s.day,
+        slot: s.slot,
+        classroom: s.classroom,
+      })),
+      enrolled: offering.kind === "OPTIONAL" && enrolledIds.has(offering.id),
+    };
+  });
+
+  return response.status(200).send(result);
 }
