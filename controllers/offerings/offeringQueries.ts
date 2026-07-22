@@ -149,12 +149,17 @@ export async function getPublicOfferingsBySubjectLevel(
 
   const courseIds = await courseIdsForLevel(year, level);
 
+  // Avanzado/seminar offerings are OPTIONAL offerings under their own
+  // subjects (e.g. "IA", "UX/UI") that share the level's courses, not
+  // sub-offerings of the mandatory subject itself — only the MANDATORY side
+  // is actually scoped to `subject` (e.g. "Proyecto"); any OPTIONAL offering
+  // reachable from this level's courses counts, regardless of its subject.
   const [offerings, levelCounts] = await Promise.all([
     prisma.offering.findMany({
       where: {
         year,
-        subject: { name: subject },
         offeringCourses: { some: { courseId: { in: courseIds } } },
+        OR: [{ kind: "MANDATORY", subject: { name: subject } }, { kind: "OPTIONAL" }],
       },
       include: {
         subject: true,
