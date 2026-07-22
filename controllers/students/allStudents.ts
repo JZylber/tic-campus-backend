@@ -21,6 +21,7 @@ type StudentResponse = {
   email: string;
   courses: StudentCourseEntry[];
   subjects: SubjectEntry[];
+  optionalOfferingIds: number[];
 };
 
 export async function getSubjectStudents(
@@ -84,6 +85,9 @@ export async function getAllStudents(_request: Request, response: Response) {
               },
             },
           },
+          studentOfferings: {
+            select: { eligible: { select: { offeringId: true } } },
+          },
         },
       },
     },
@@ -104,6 +108,9 @@ export async function getAllStudents(_request: Request, response: Response) {
         subject: oc.offering.subject.name,
         id_course: oc.courseId,
       }))
+    ),
+    optionalOfferingIds: user.studentCourses.flatMap(({ studentOfferings }) =>
+      studentOfferings.map((so) => so.eligible.offeringId)
     ),
   }));
   return response.status(200).send(students);

@@ -7,7 +7,7 @@ import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
 
-router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER]), getAllStudents);
+router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), getAllStudents);
 router.get("/:subject/:course/:year", getSubjectStudents);
 router.patch("/:studentId", requireJwt, requireRole([Role.ADMIN]), updateStudent);
 router.post("/:studentId/course", requireJwt, requireRole([Role.ADMIN]), addStudentToCourse);

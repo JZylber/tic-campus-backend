@@ -14,7 +14,7 @@ import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
 
-router.get("/", requireJwt, requireRole([Role.ADMIN]), listOfferings);
+router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), listOfferings);
 router.get("/subjects", requireJwt, requireRole([Role.ADMIN]), listSubjectsCatalog);
 router.post("/", requireJwt, requireRole([Role.ADMIN]), createOffering);
 router.patch("/:id", requireJwt, requireRole([Role.ADMIN]), updateOffering);
