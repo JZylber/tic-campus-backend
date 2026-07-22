@@ -32,6 +32,12 @@ enum Weekday {
   FRIDAY
 }
 
+enum Semester {
+  FIRST
+  SECOND
+  BOTH
+}
+
 // Define your database models here
 
 model User {
@@ -111,6 +117,7 @@ model Offering {
   name          String?
   kind          OfferingKind @default(MANDATORY)
   year          Int
+  semester      Semester     @default(BOTH)
   offeringCourses  OfferingCourse[]
   teacherOfferings TeacherOffering[]
   redos            RevisionRequest[]

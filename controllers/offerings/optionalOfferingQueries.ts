@@ -84,6 +84,7 @@ export async function listOptionalOfferings(request: Request, response: Response
       level,
       templateId: offering.templateId,
       spreadsheetId: offering.spreadsheetId,
+      semester: offering.semester,
       displayName: buildDisplayName(
         composeSubjectName(offering.subject.name, offering.name),
         offering.offeringCourses,
@@ -133,6 +134,7 @@ export async function listOfferings(request: Request, response: Response) {
       level,
       templateId: offering.templateId,
       spreadsheetId: offering.spreadsheetId,
+      semester: offering.semester,
       displayName: buildDisplayName(
         composeSubjectName(offering.subject.name, offering.name),
         offering.offeringCourses,

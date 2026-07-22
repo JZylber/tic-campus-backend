@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
+import { Semester } from "../../generated/prisma/enums.ts";
 import {
   buildDisplayName,
   composeSubjectName,
@@ -11,6 +12,9 @@ type Course = { id: number; name: string; year: number };
 
 const isPositiveInt = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value > 0;
+
+const isValidSemester = (value: unknown): value is Semester =>
+  typeof value === "string" && (Object.values(Semester) as string[]).includes(value);
 
 const isNonEmptyPositiveIntArray = (value: unknown): value is number[] =>
   Array.isArray(value) && value.length > 0 && value.every(isPositiveInt);
@@ -58,11 +62,12 @@ export async function createOptionalOffering(
       templateId?: string;
       spreadsheetId?: string | null;
       name?: string | null;
+      semester: Semester;
     }
   >,
   response: Response,
 ) {
-  const { subjectId, courseIds, templateId, spreadsheetId, name } = request.body;
+  const { subjectId, courseIds, templateId, spreadsheetId, name, semester } = request.body;
   const yearInput = request.body.year;
 
   if (!isPositiveInt(subjectId)) {
@@ -82,6 +87,9 @@ export async function createOptionalOffering(
   }
   if (!isOptionalNullableString(name)) {
     return response.status(400).send({ error: "Invalid name" });
+  }
+  if (!isValidSemester(semester)) {
+    return response.status(400).send({ error: "Invalid semester" });
   }
 
   const year = yearInput ?? new Date().getFullYear();
@@ -111,6 +119,7 @@ export async function createOptionalOffering(
         templateId: templateId ?? "",
         spreadsheetId: spreadsheetId ?? null,
         name: name ?? null,
+        semester,
       },
     });
     await tx.offeringCourse.createMany({
@@ -131,6 +140,7 @@ export async function createOptionalOffering(
     level,
     templateId: offering.templateId,
     spreadsheetId: offering.spreadsheetId,
+    semester: offering.semester,
     displayName: buildDisplayName(
       composeSubjectName(subject.name, offering.name),
       offeringCourses,
@@ -153,12 +163,13 @@ export async function updateOptionalOffering(
       templateId?: string;
       spreadsheetId?: string | null;
       name?: string | null;
+      semester?: Semester;
     }
   >,
   response: Response,
 ) {
   const id = Number(request.params.id);
-  const { courseIds, templateId, spreadsheetId, name } = request.body;
+  const { courseIds, templateId, spreadsheetId, name, semester } = request.body;
 
   if (!isPositiveInt(id)) {
     return response.status(400).send({ error: "Invalid offering id" });
@@ -174,6 +185,9 @@ export async function updateOptionalOffering(
   }
   if (!isOptionalNullableString(name)) {
     return response.status(400).send({ error: "Invalid name" });
+  }
+  if (semester !== undefined && !isValidSemester(semester)) {
+    return response.status(400).send({ error: "Invalid semester" });
   }
 
   const existing = await prisma.offering.findUnique({
@@ -227,8 +241,10 @@ export async function updateOptionalOffering(
       });
     }
     const updateData = Object.fromEntries(
-      Object.entries({ templateId, spreadsheetId, name }).filter(([, v]) => v !== undefined),
-    ) as { templateId?: string; spreadsheetId?: string | null; name?: string | null };
+      Object.entries({ templateId, spreadsheetId, name, semester }).filter(
+        ([, v]) => v !== undefined,
+      ),
+    ) as { templateId?: string; spreadsheetId?: string | null; name?: string | null; semester?: Semester };
     if (Object.keys(updateData).length) {
       await tx.offering.update({ where: { id }, data: updateData });
     }
@@ -250,6 +266,7 @@ export async function updateOptionalOffering(
     level,
     templateId: updated.templateId,
     spreadsheetId: updated.spreadsheetId,
+    semester: updated.semester,
     displayName: buildDisplayName(
       composeSubjectName(updated.subject.name, updated.name),
       updated.offeringCourses,
