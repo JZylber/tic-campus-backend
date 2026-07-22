@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
 import { setCacheHeaders } from "../shared.ts";
-import { composeSubjectName } from "../offerings/optionalOfferingQueries.ts";
+import { composeSubjectName } from "../offerings/offeringQueries.ts";
 
 export async function getRevisionRequests(
   request: Request<

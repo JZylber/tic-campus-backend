@@ -1,12 +1,12 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
-import { Semester } from "../../generated/prisma/enums.ts";
+import { Semester, OfferingKind } from "../../generated/prisma/enums.ts";
 import {
   buildDisplayName,
   composeSubjectName,
   levelFromCourses,
   countCoursesForLevelYear,
-} from "./optionalOfferingQueries.ts";
+} from "./offeringQueries.ts";
 
 type Course = { id: number; name: string; year: number };
 
@@ -15,6 +15,9 @@ const isPositiveInt = (value: unknown): value is number =>
 
 const isValidSemester = (value: unknown): value is Semester =>
   typeof value === "string" && (Object.values(Semester) as string[]).includes(value);
+
+const isValidKind = (value: unknown): value is OfferingKind =>
+  typeof value === "string" && (Object.values(OfferingKind) as string[]).includes(value);
 
 const isNonEmptyPositiveIntArray = (value: unknown): value is number[] =>
   Array.isArray(value) && value.length > 0 && value.every(isPositiveInt);
@@ -29,9 +32,10 @@ function levelOf(course: Course): number {
   return Number(course.name[2] || 0);
 }
 
-// Validates that a set of courses is consistent for a single optional
-// offering: all belong to the same calendar year, all share the same
-// level (3rd or 4th), and that level is one of the two this feature covers.
+// Validates that a set of courses is consistent for a single offering: all
+// belong to the same calendar year, share the same level, and that level is
+// 3, 4, or 5 (the only levels the Materias admin tab manages, for both
+// MANDATORY and OPTIONAL offerings).
 function validateCourseSet(
   courses: Course[],
   year: number,
@@ -45,18 +49,22 @@ function validateCourseSet(
     return { error: "All selected courses must belong to the same level" };
   }
   const [level] = levels;
-  if (level !== 3 && level !== 4) {
-    return { error: "Selected courses must belong to level 3 or 4" };
+  if (level === undefined) {
+    return null;
+  }
+  if (level < 3 || level > 5) {
+    return { error: "Selected courses must belong to level 3, 4, or 5" };
   }
   return null;
 }
 
-export async function createOptionalOffering(
+export async function createOffering(
   request: Request<
     {},
     {},
     {
       subjectId: number;
+      kind: OfferingKind;
       year?: number;
       courseIds: number[];
       templateId?: string;
@@ -67,11 +75,14 @@ export async function createOptionalOffering(
   >,
   response: Response,
 ) {
-  const { subjectId, courseIds, templateId, spreadsheetId, name, semester } = request.body;
+  const { subjectId, kind, courseIds, templateId, spreadsheetId, name, semester } = request.body;
   const yearInput = request.body.year;
 
   if (!isPositiveInt(subjectId)) {
     return response.status(400).send({ error: "Invalid subjectId" });
+  }
+  if (!isValidKind(kind)) {
+    return response.status(400).send({ error: "Invalid kind" });
   }
   if (!isNonEmptyPositiveIntArray(courseIds)) {
     return response.status(400).send({ error: "courseIds is required" });
@@ -115,7 +126,7 @@ export async function createOptionalOffering(
       data: {
         subjectId,
         year,
-        kind: "OPTIONAL",
+        kind,
         templateId: templateId ?? "",
         spreadsheetId: spreadsheetId ?? null,
         name: name ?? null,
@@ -136,6 +147,7 @@ export async function createOptionalOffering(
     subjectId: offering.subjectId,
     subjectName: subject.name,
     name: offering.name,
+    kind: offering.kind,
     year: offering.year,
     level,
     templateId: offering.templateId,
@@ -154,7 +166,7 @@ export async function createOptionalOffering(
   });
 }
 
-export async function updateOptionalOffering(
+export async function updateOffering(
   request: Request<
     { id: string },
     {},
@@ -194,8 +206,8 @@ export async function updateOptionalOffering(
     where: { id },
     include: { offeringCourses: true },
   });
-  if (!existing || existing.kind !== "OPTIONAL") {
-    return response.status(404).send({ error: "Optional offering not found" });
+  if (!existing) {
+    return response.status(404).send({ error: "Offering not found" });
   }
 
   let toAdd: number[] = [];
@@ -262,6 +274,7 @@ export async function updateOptionalOffering(
     subjectId: updated.subjectId,
     subjectName: updated.subject.name,
     name: updated.name,
+    kind: updated.kind,
     year: updated.year,
     level,
     templateId: updated.templateId,
@@ -280,7 +293,7 @@ export async function updateOptionalOffering(
   });
 }
 
-export async function deleteOptionalOffering(
+export async function deleteOffering(
   request: Request<{ id: string }>,
   response: Response,
 ) {
@@ -290,8 +303,8 @@ export async function deleteOptionalOffering(
   }
 
   const existing = await prisma.offering.findUnique({ where: { id } });
-  if (!existing || existing.kind !== "OPTIONAL") {
-    return response.status(404).send({ error: "Optional offering not found" });
+  if (!existing) {
+    return response.status(404).send({ error: "Offering not found" });
   }
 
   const enrolled = await prisma.studentOffering.findFirst({ where: { offeringId: id } });

@@ -57,50 +57,6 @@ export async function countCoursesByLevel(year: number): Promise<Map<number, num
   return counts;
 }
 
-export async function listOptionalOfferings(request: Request, response: Response) {
-  const yearParam = Number(request.query.year);
-  const year = Number.isInteger(yearParam) && yearParam > 0 ? yearParam : new Date().getFullYear();
-
-  const [offerings, levelCounts] = await Promise.all([
-    prisma.offering.findMany({
-      where: { kind: "OPTIONAL", year },
-      include: {
-        subject: true,
-        offeringCourses: { include: { course: true } },
-      },
-      orderBy: [{ subject: { name: "asc" } }],
-    }),
-    countCoursesByLevel(year),
-  ]);
-
-  const result = offerings.map((offering) => {
-    const level = levelFromCourses(offering.offeringCourses);
-    return {
-      id: offering.id,
-      subjectId: offering.subjectId,
-      subjectName: offering.subject.name,
-      name: offering.name,
-      year: offering.year,
-      level,
-      templateId: offering.templateId,
-      spreadsheetId: offering.spreadsheetId,
-      semester: offering.semester,
-      displayName: buildDisplayName(
-        composeSubjectName(offering.subject.name, offering.name),
-        offering.offeringCourses,
-        levelCounts.get(level) ?? 0,
-      ),
-      courses: offering.offeringCourses.map((oc) => ({
-        courseId: oc.courseId,
-        courseName: oc.course.name,
-        division: oc.course.name[3] || "",
-      })),
-    };
-  });
-
-  return response.status(200).send(result);
-}
-
 // Lists offerings of any kind (MANDATORY or OPTIONAL) for a year, with
 // their time slots included — the data source for the admin timetable
 // editor, which needs to schedule the regular curriculum, not just
