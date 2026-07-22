@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Role } from "../../generated/prisma/enums.ts";
 import {
+  listOfferings,
   listOptionalOfferings,
   listSubjectsCatalog,
 } from "../../controllers/offerings/optionalOfferingQueries.ts";
@@ -13,6 +14,8 @@ import requireJwt from "../../middlewares/requireJWT.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
+
+router.get("/", requireJwt, requireRole([Role.ADMIN]), listOfferings);
 
 // Literal paths must be registered before the "/optional/:id" wildcard below.
 router.get("/optional/subjects", requireJwt, requireRole([Role.ADMIN]), listSubjectsCatalog);

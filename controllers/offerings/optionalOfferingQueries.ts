@@ -47,7 +47,7 @@ export async function countCoursesForLevelYear(year: number, level: number): Pro
   return courses.filter((c) => Number(c.name[2] || 0) === level).length;
 }
 
-async function countCoursesByLevel(year: number): Promise<Map<number, number>> {
+export async function countCoursesByLevel(year: number): Promise<Map<number, number>> {
   const courses = await prisma.course.findMany({ where: { year }, select: { name: true } });
   const counts = new Map<number, number>();
   for (const c of courses) {
@@ -93,6 +93,61 @@ export async function listOptionalOfferings(request: Request, response: Response
         courseId: oc.courseId,
         courseName: oc.course.name,
         division: oc.course.name[3] || "",
+      })),
+    };
+  });
+
+  return response.status(200).send(result);
+}
+
+// Lists offerings of any kind (MANDATORY or OPTIONAL) for a year, with
+// their time slots included — the data source for the admin timetable
+// editor, which needs to schedule the regular curriculum, not just
+// electives.
+export async function listOfferings(request: Request, response: Response) {
+  const yearParam = Number(request.query.year);
+  const year = Number.isInteger(yearParam) && yearParam > 0 ? yearParam : new Date().getFullYear();
+
+  const [offerings, levelCounts] = await Promise.all([
+    prisma.offering.findMany({
+      where: { year },
+      include: {
+        subject: true,
+        offeringCourses: { include: { course: true } },
+        timeSlots: true,
+      },
+      orderBy: [{ subject: { name: "asc" } }],
+    }),
+    countCoursesByLevel(year),
+  ]);
+
+  const result = offerings.map((offering) => {
+    const level = levelFromCourses(offering.offeringCourses);
+    return {
+      id: offering.id,
+      subjectId: offering.subjectId,
+      subjectName: offering.subject.name,
+      name: offering.name,
+      kind: offering.kind,
+      year: offering.year,
+      level,
+      templateId: offering.templateId,
+      spreadsheetId: offering.spreadsheetId,
+      displayName: buildDisplayName(
+        composeSubjectName(offering.subject.name, offering.name),
+        offering.offeringCourses,
+        levelCounts.get(level) ?? 0,
+      ),
+      courses: offering.offeringCourses.map((oc) => ({
+        courseId: oc.courseId,
+        courseName: oc.course.name,
+        division: oc.course.name[3] || "",
+      })),
+      timeSlots: offering.timeSlots.map((s) => ({
+        id: s.id,
+        day: s.day,
+        slot: s.slot,
+        classroom: s.classroom,
       })),
     };
   });
