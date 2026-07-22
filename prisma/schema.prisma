@@ -43,7 +43,7 @@ enum Semester {
 
 model User {
   id              Int               @id @default(autoincrement())
-  dni             String            @unique
+  dni             String?           @unique
   email           String            @unique
   name            String?
   surname         String?

@@ -17,7 +17,7 @@ type StudentResponse = {
   id: number;
   name: string;
   surname: string;
-  dni: string;
+  dni: string | null;
   email: string;
   courses: StudentCourseEntry[];
   subjects: SubjectEntry[];

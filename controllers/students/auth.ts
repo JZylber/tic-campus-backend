@@ -54,7 +54,7 @@ export async function getStudentData(
   )?.course;
   // IF year is 2025, use DNI as student ID
   if (year === 2025) {
-    studentId = parseInt(possibleStudents[0]!.item.dni);
+    studentId = parseInt(possibleStudents[0]!.item.dni!);
   }
   // Set cache headers for 10 minutes
   setCacheHeaders(response, 600);
