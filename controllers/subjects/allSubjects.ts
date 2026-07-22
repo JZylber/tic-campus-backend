@@ -15,6 +15,9 @@ export async function getAllSubjects(request: Request, response: Response) {
   // so ordering happens in the DB (same collation as before) — year desc,
   // subject name asc, course name asc.
   const offeringCourses = await prisma.offeringCourse.findMany({
+    where: {
+      offering: { templateId: { not: "" } },
+    },
     include: {
       course: true,
       offering: { include: { subject: true } },
