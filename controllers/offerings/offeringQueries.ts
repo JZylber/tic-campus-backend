@@ -121,6 +121,28 @@ export async function listOfferings(request: Request, response: Response) {
   return response.status(200).send(result);
 }
 
+// Distinct (year, level) pairs where a MANDATORY offering of `subject` exists —
+// unfiltered by templateId, since callers here (Proyecto's static path generation)
+// aren't template-driven.
+export async function getSubjectLevels(request: Request<{ subject: string }>, response: Response) {
+  const { subject } = request.params;
+  const offerings = await prisma.offering.findMany({
+    where: { kind: "MANDATORY", subject: { name: subject } },
+    select: { year: true, offeringCourses: { include: { course: { select: { name: true } } } } },
+  });
+  const pairs = new Set<string>();
+  for (const o of offerings) {
+    const level = levelFromCourses(o.offeringCourses);
+    if (level > 0) pairs.add(`${o.year}-${level}`);
+  }
+  return response.status(200).send(
+    [...pairs].map((pair) => {
+      const [year, level] = pair.split("-");
+      return { year: Number(year), level: Number(level) };
+    }),
+  );
+}
+
 export async function listSubjectsCatalog(_request: Request, response: Response) {
   const subjects = await prisma.subject.findMany({
     select: { id: true, name: true },
