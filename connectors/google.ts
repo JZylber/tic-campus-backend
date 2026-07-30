@@ -88,3 +88,25 @@ export async function getSpreadsheetId(
   }
   return spreadsheetId.spreadsheetId;
 }
+
+// Resolves the Offering itself (not just its spreadsheetId) for a
+// subject/course/year, optionally disambiguated by a known spreadsheetId
+// (multiple offerings of the same subject on the same course, e.g. two
+// optional variants, are told apart by dataSheetId). Callers use `kind` to
+// decide whether the offering's roster is the whole course (MANDATORY) or
+// just its StudentOffering enrollees (OPTIONAL).
+export async function resolveOffering(
+  subject: string,
+  course: string,
+  year: number,
+  spreadsheetId?: string,
+) {
+  return prisma.offering.findFirst({
+    where: {
+      subject: { name: subject },
+      offeringCourses: { some: { course: { name: course, year } } },
+      ...(spreadsheetId ? { spreadsheetId } : {}),
+    },
+    select: { id: true, kind: true, spreadsheetId: true },
+  });
+}

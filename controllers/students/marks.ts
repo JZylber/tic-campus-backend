@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { getSheetClient, getSpreadsheetId } from "../../connectors/google.ts";
+import {
+  getSheetClient,
+  getSpreadsheetId,
+  resolveOffering,
+} from "../../connectors/google.ts";
 import { asTableData, setCacheHeaders } from "../shared.ts";
 import type {
   MarksTable,
@@ -251,9 +255,20 @@ export async function getMarksBySubject(
 ) {
   const { subject, course, year } = request.params;
   let spreadsheetId = request.query.dataSheetId || "";
+  // Resolve the Offering behind this subject/course/year (disambiguated by
+  // dataSheetId when given) so we know whether its roster is the whole
+  // course (MANDATORY) or just its StudentOffering enrollees (OPTIONAL).
+  const offering = await resolveOffering(
+    subject,
+    course,
+    Number(year),
+    spreadsheetId || undefined,
+  );
   if (!spreadsheetId) {
     try {
-      spreadsheetId = await getSpreadsheetId(subject, course, Number(year));
+      spreadsheetId =
+        offering?.spreadsheetId ||
+        (await getSpreadsheetId(subject, course, Number(year)));
     } catch (error) {
       return response.status(404).send({ error: (error as Error).message });
     }
@@ -282,7 +297,11 @@ export async function getMarksBySubject(
       };
     }
   };
-  // Get student names from the database and fill marksByStudent
+  // Get student names from the database and fill marksByStudent. For an
+  // OPTIONAL offering (electives/avanzados/seminars), only students actually
+  // enrolled in it (StudentOffering) should show up — not the whole course.
+  // MANDATORY offerings (and offerings we couldn't resolve, e.g. a stale
+  // dataSheetId) keep the previous whole-course behavior.
   const students = await prisma.user.findMany({
     where: {
       studentCourses: {
@@ -291,6 +310,9 @@ export async function getMarksBySubject(
             name: course,
             year: Number(year),
           },
+          ...(offering?.kind === "OPTIONAL"
+            ? { studentOfferings: { some: { offeringId: offering.id } } }
+            : {}),
         },
       },
     },
