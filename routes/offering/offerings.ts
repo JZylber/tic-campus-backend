@@ -6,6 +6,7 @@ import {
   getPublicOfferingsBySubjectLevel,
   getSubjectLevels,
 } from "../../controllers/offerings/offeringQueries.ts";
+import { getOfferingRoster } from "../../controllers/offerings/offeringRoster.ts";
 import {
   createOffering,
   updateOffering,
@@ -19,6 +20,12 @@ const router: Router = Router();
 router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), listOfferings);
 router.get("/subjects", requireJwt, requireRole([Role.ADMIN]), listSubjectsCatalog);
 router.get("/:subject/levels", getSubjectLevels);
+router.get(
+  "/:offeringId/students",
+  requireJwt,
+  requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]),
+  getOfferingRoster,
+);
 router.get("/:subject/:year/:level/:studentId", getPublicOfferingsBySubjectLevel);
 router.post("/", requireJwt, requireRole([Role.ADMIN]), createOffering);
 router.patch("/:id", requireJwt, requireRole([Role.ADMIN]), updateOffering);
