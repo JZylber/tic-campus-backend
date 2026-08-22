@@ -73,8 +73,9 @@ router.get("/google", (req: Request, res: Response, next: NextFunction) => {
   return authenticator(req, res, next);
 });
 
-// Google OAuth callback. Sets an httpOnly cookie containing the JWT and
-// redirects back to the FE (returnTo if valid, otherwise FE_BASE_URL).
+// Google OAuth callback. Signs a JWT and redirects back to the FE with it in
+// the URL fragment (returnTo if valid, otherwise FE_BASE_URL). See the comment
+// on the redirect below for why a fragment rather than a cookie.
 router.get(
   "/google/callback",
   passport.authenticate("google", { session: false }),

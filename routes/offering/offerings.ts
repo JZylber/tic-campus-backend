@@ -13,6 +13,7 @@ import {
   deleteOffering,
 } from "../../controllers/offerings/offeringMutations.ts";
 import requireJwt from "../../middlewares/requireJWT.ts";
+import { requireStudentSelfOrAnonymous } from "../../middlewares/requireStudent.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
@@ -26,7 +27,7 @@ router.get(
   requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]),
   getOfferingRoster,
 );
-router.get("/:subject/:year/:level/:studentId", getPublicOfferingsBySubjectLevel);
+router.get("/:subject/:year/:level/:studentId", requireStudentSelfOrAnonymous("studentId"), getPublicOfferingsBySubjectLevel);
 router.post("/", requireJwt, requireRole([Role.ADMIN]), createOffering);
 router.patch("/:id", requireJwt, requireRole([Role.ADMIN]), updateOffering);
 router.delete("/:id", requireJwt, requireRole([Role.ADMIN]), deleteOffering);

@@ -1,12 +1,13 @@
 import "./loadEnv.ts";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import authRoute from "./routes/authRoute.ts";
+import studentSessionRoute from "./routes/auth/studentSession.ts";
 import userRoute from "./routes/student/userInfo.ts";
 import studentsRoute from "./routes/student/students.ts";
 import teachersRoute from "./routes/teacher/teachers.ts";
-import studentRoute from "./routes/student/student.ts";
 import marksRoute from "./routes/student/marks.ts";
 import subjectsRoute from "./routes/subject/subjects.ts";
 import articlesRoute from "./routes/subject/articles.ts";
@@ -24,6 +25,10 @@ const app = express();
 const PORT = process.env.PORT;
 
 app.use(express.json());
+// Unsigned on purpose: the only cookie we set holds a JWT already signed with
+// JWT_SECRET, so a second cookie-signing secret would add a moving part and no
+// security. See auth/studentJwt.ts.
+app.use(cookieParser());
 
 const toOrigin = (url: string | undefined): string | null => {
   if (!url) return null;
@@ -55,10 +60,10 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth",             authRoute);
+app.use("/auth",             studentSessionRoute);
 app.use("/user",             userRoute);
 app.use("/students",         studentsRoute);
 app.use("/teachers",         teachersRoute);
-app.use("/student",          studentRoute);
 app.use("/marks",            marksRoute);
 app.use("/subjects",         subjectsRoute);
 app.use("/articles",         articlesRoute);

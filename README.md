@@ -8,7 +8,7 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 - **Framework:** Express 5
 - **Database:** PostgreSQL via Prisma
 - **External data:** Google Sheets API (subject content, marks, materials, calendar)
-- **Auth:** Google OAuth 2.0 + JWT (httpOnly cookie)
+- **Auth:** Google OAuth 2.0 + JWT for staff (URL fragment → `Authorization: Bearer`); campus-session-derived JWT for students (httpOnly `Partitioned` cookie + `X-Student-Token` fallback)
 - **Package manager:** pnpm
 
 ## Project structure
@@ -84,7 +84,9 @@ pnpm start      # runs compiled output
 
 ## Endpoints
 
-Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). Requests without a valid token return `401`; requests with an insufficient role return `403`.
+Routes marked with a role require a staff JWT in `Authorization: Bearer` (stored by the frontend under `ticCampusAccessToken`). Requests without a valid token return `401`; requests with an insufficient role return `403`.
+
+Routes marked **student** require a student token, sent either as the `ticCampusStudentToken` cookie or the `X-Student-Token` header (see `auth/studentJwt.ts`). It is minted by `POST /auth/campus/session`, which relays the caller's campus.ort.edu.ar session cookie server-side and re-derives their identity rather than trusting the browser, or by `POST /auth/impersonate` for staff. Where the route takes a student identifier in the path, it must be the token's own student (`User.id`, or the DNI on 2025 pages) — otherwise `403`.
 
 | Symbol | Meaning |
 |---|---|
@@ -97,7 +99,10 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/auth/google` | — | Initiates the Google OAuth flow. Accepts an optional `returnTo` query param to redirect after login. |
-| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and sets it as an httpOnly cookie (`ticCampusAccessToken`), then redirects to the frontend. |
+| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and redirects to the frontend with it in the URL fragment. |
+| `POST` | `/auth/campus/session` | — | Relays a campus session cookie, re-derives the student's identity from campus.ort.edu.ar server-side, and mints an 8h student token. `404` no match, `409` ambiguous. |
+| `DELETE` | `/auth/campus/session` | — | Clears the student cookie. |
+| `POST` | `/auth/impersonate` | ADMIN, TEACHER | Mints a 2h student token for a teacher/admin to view a student's pages. ADMIN any student; TEACHER only students in courses they teach. Records the actor in the token's `act` claim. |
 
 ### User — `/user`
 
@@ -125,7 +130,6 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/student` | — | Searches for a student by `name` and `surname` for a given `year` using fuzzy matching. Returns the student ID and course information. |
 
 ### Teachers — `/teachers`
 
@@ -137,7 +141,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/marks/:subject/:course/:year/:id` | — | Returns marks, activities, and redos for a specific student in a subject. Filters by visibility and includes fixed marks and criteria. |
+| `GET` | `/marks/:subject/:course/:year/:id` | **student** (`:id` must be self) | Returns marks, activities, and redos for a specific student in a subject. Filters by visibility and includes fixed marks and criteria. Cached `private` only — never `public`, since the response is per-student. |
 | `GET` | `/marks/:subject/:course/:year` | `ADMIN / TEACHER` | Returns all students' activities, marked activities, and redos for a subject, organized by student ID with criteria information. |
 
 ### Subjects — `/subjects`
@@ -170,7 +174,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/revisionRequests/:subject/:course/:year/:id` | — | Returns the activity IDs of all pending (unreviewed) revision requests for a student in a specific subject/course/year. |
+| `GET` | `/revisionRequests/:subject/:course/:year/:id` | **student** (`:id` must be self) | Returns the activity IDs of all pending (unreviewed) revision requests for a student in a specific subject/course/year. |
 | `GET` | `/revisionRequests/teacher/:year/:teacherId` | `ADMIN / TEACHER` | Returns all revision requests (both reviewed and unreviewed) across all subjects taught by a teacher in a given year. |
 | `PATCH` | `/revisionRequests/:id/reviewed` | `ADMIN / TEACHER` | Marks a revision request as reviewed or unreviewed. |
 
@@ -205,7 +209,7 @@ or
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/revisionRequest` | — | Creates revision requests for one or more students on an activity. Validates dates and checks for existing unreviewed requests before creating. |
+| `POST` | `/revisionRequest` | **student** | Creates revision requests for one or more students on an activity. It is a group flow, so `studentIds` may hold several ids — but the caller must be one of them, and the rest must be their classmates in that course/year. Validates dates and checks for existing unreviewed requests before creating. |
 
 ### Calendar — `/calendar`
 

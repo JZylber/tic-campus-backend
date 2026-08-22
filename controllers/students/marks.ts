@@ -4,7 +4,7 @@ import {
   getSpreadsheetId,
   resolveOffering,
 } from "../../connectors/google.ts";
-import { asTableData, setCacheHeaders } from "../shared.ts";
+import { asTableData, setPrivateCacheHeaders } from "../shared.ts";
 import type {
   MarksTable,
   ActivitiesTable,
@@ -233,8 +233,8 @@ export async function getStudentMarks(
         suggestion: mark.suggestion,
       };
     });
-  // Set Cache Control, CDN-Cache-Control and Vercel-CDN-Cache-Control to 100 seconds
-  setCacheHeaders(response, 100);
+  // Private, not public: this response is scoped to one authenticated student.
+  setPrivateCacheHeaders(response, 100);
   return response.status(200).send({
     classActivities: studentClassActivities,
     markedActivities: studentMarkedActivities,

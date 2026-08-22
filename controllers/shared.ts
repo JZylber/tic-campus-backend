@@ -29,3 +29,15 @@ export function setCacheHeaders(response: Response, durationInSeconds: number) {
   response.setHeader("CDN-Cache-Control", cacheValue);
   response.setHeader("Vercel-CDN-Cache-Control", cacheValue);
 }
+
+export function setPrivateCacheHeaders(
+  response: Response,
+  durationInSeconds: number,
+) {
+  // `private` on purpose: these responses are scoped to one authenticated
+  // student, so a shared cache (Vercel's CDN) holding them would let one
+  // student be served another's data. Only the browser may cache this.
+  response.setHeader("Cache-Control", `private, max-age=${durationInSeconds}`);
+  response.setHeader("CDN-Cache-Control", "no-store");
+  response.setHeader("Vercel-CDN-Cache-Control", "no-store");
+}
