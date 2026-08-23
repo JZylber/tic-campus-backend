@@ -12,23 +12,23 @@ import {
   updateOffering,
   deleteOffering,
 } from "../../controllers/offerings/offeringMutations.ts";
-import requireJwt from "../../middlewares/requireJWT.ts";
+import requireAuth from "../../middlewares/requireAuth.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
 
-router.get("/", requireJwt, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), listOfferings);
-router.get("/subjects", requireJwt, requireRole([Role.ADMIN]), listSubjectsCatalog);
+router.get("/", requireAuth, requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]), listOfferings);
+router.get("/subjects", requireAuth, requireRole([Role.ADMIN]), listSubjectsCatalog);
 router.get("/:subject/levels", getSubjectLevels);
 router.get(
   "/:offeringId/students",
-  requireJwt,
+  requireAuth,
   requireRole([Role.ADMIN, Role.TEACHER, Role.COUNSELOR]),
   getOfferingRoster,
 );
 router.get("/:subject/:year/:level/:studentId", getPublicOfferingsBySubjectLevel);
-router.post("/", requireJwt, requireRole([Role.ADMIN]), createOffering);
-router.patch("/:id", requireJwt, requireRole([Role.ADMIN]), updateOffering);
-router.delete("/:id", requireJwt, requireRole([Role.ADMIN]), deleteOffering);
+router.post("/", requireAuth, requireRole([Role.ADMIN]), createOffering);
+router.patch("/:id", requireAuth, requireRole([Role.ADMIN]), updateOffering);
+router.delete("/:id", requireAuth, requireRole([Role.ADMIN]), deleteOffering);
 
 export default router;

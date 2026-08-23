@@ -5,13 +5,13 @@ import {
   updateOfferingTimeSlot,
   deleteOfferingTimeSlot,
 } from "../../controllers/offerings/timeSlotMutations.ts";
-import requireJwt from "../../middlewares/requireJWT.ts";
+import requireAuth from "../../middlewares/requireAuth.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
 
-router.post("/:offeringId/timeSlots", requireJwt, requireRole([Role.ADMIN]), addOfferingTimeSlot);
-router.patch("/:offeringId/timeSlots/:slotId", requireJwt, requireRole([Role.ADMIN]), updateOfferingTimeSlot);
-router.delete("/:offeringId/timeSlots/:slotId", requireJwt, requireRole([Role.ADMIN]), deleteOfferingTimeSlot);
+router.post("/:offeringId/timeSlots", requireAuth, requireRole([Role.ADMIN]), addOfferingTimeSlot);
+router.patch("/:offeringId/timeSlots/:slotId", requireAuth, requireRole([Role.ADMIN]), updateOfferingTimeSlot);
+router.delete("/:offeringId/timeSlots/:slotId", requireAuth, requireRole([Role.ADMIN]), deleteOfferingTimeSlot);
 
 export default router;

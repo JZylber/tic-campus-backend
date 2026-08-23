@@ -57,7 +57,7 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 │   ├── project/
 │   │   └── calendar.ts
 │   └── shared.ts             # Shared utilities (cache headers, sheet parsing)
-├── middlewares/              # JWT and auth middleware
+├── middlewares/              # Auth (JWT / service key) and role middleware
 ├── connectors/               # Google Sheets and DB connectors
 └── prisma/                   # Prisma schema and migrations
 ```
@@ -81,14 +81,21 @@ pnpm start      # runs compiled output
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `JWT_SECRET` | Secret for signing JWT tokens |
+| `SERVICE_API_KEY` | Shared secret for the service account. Sent as the `X-API-Key` header; grants TEACHER-level access to guarded routes. Leave unset to disable service-account auth. |
 
 ## Endpoints
 
-Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). Requests without a valid token return `401`; requests with an insufficient role return `403`.
+Guarded routes accept either credential:
+
+- **User** — `Authorization: Bearer <jwt>`, using the token issued by the Google OAuth callback.
+- **Service account** — `X-API-Key: <SERVICE_API_KEY>`, for server-to-server callers. It is treated as a
+  `TEACHER`, so `ADMIN`-only routes remain closed to it.
+
+Requests without a valid credential return `401`; requests with an insufficient role return `403`.
 
 | Symbol | Meaning |
 |---|---|
-| `JWT` | Valid JWT required (any authenticated user) |
+| `JWT` | Valid credential required (any authenticated user, or the service account) |
 | `ADMIN` | Admin role required |
 | `ADMIN / TEACHER` | Admin or teacher role required |
 
@@ -97,7 +104,7 @@ Routes marked with a role require a valid JWT cookie (`ticCampusAccessToken`). R
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/auth/google` | — | Initiates the Google OAuth flow. Accepts an optional `returnTo` query param to redirect after login. |
-| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and sets it as an httpOnly cookie (`ticCampusAccessToken`), then redirects to the frontend. |
+| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and returns it to the frontend in the redirect URL fragment (`#token=<jwt>`). |
 
 ### User — `/user`
 
