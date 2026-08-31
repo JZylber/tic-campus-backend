@@ -14,6 +14,7 @@ import type {
   FixedMarksTable,
 } from "../subjectSchema.ts";
 import prisma from "../../prisma/prisma.ts";
+import { Role } from "../../generated/prisma/enums.ts";
 
 interface Activity {
   studentId: string;
@@ -304,6 +305,9 @@ export async function getMarksBySubject(
   // dataSheetId) keep the previous whole-course behavior.
   const students = await prisma.user.findMany({
     where: {
+      // An enrolment alone does not make someone a student -- staff can hold
+      // one too -- and a non-student must not appear as a row to be marked.
+      role: Role.STUDENT,
       studentCourses: {
         some: {
           course: {
