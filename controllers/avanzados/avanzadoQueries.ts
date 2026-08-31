@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
-import { OfferingKind, Semester } from "../../generated/prisma/enums.ts";
+import { OfferingKind, Role, Semester } from "../../generated/prisma/enums.ts";
 import { composeSubjectName } from "../offerings/offeringQueries.ts";
 
 function levelOf(courseName: string): number {
@@ -29,7 +29,8 @@ export async function listAvanzadoStudents(request: Request, response: Response)
   }
 
   const studentCourses = await prisma.studentCourse.findMany({
-    where: { courseId: { in: courseIds } },
+    // Same rule as everywhere else: only role STUDENT counts as a student here.
+    where: { courseId: { in: courseIds }, student: { role: Role.STUDENT } },
     include: {
       student: true,
       course: true,
