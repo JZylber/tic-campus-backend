@@ -1,3 +1,7 @@
+import { request as httpsRequest } from "node:https";
+import tls from "node:tls";
+import { GODADDY_TLS_ROOT_R1 } from "./godaddyRootR1.ts";
+
 // Server-side relay to campus.ort.edu.ar.
 //
 // The embedded widget runs inside the student's own browser, so anything it
@@ -9,7 +13,7 @@
 // (neither PHPSESSID cookie is HttpOnly) and not one this adds.
 
 // Hardcoded: the client never gets to influence what we fetch (SSRF).
-const CAMPUS_ORIGIN = "https://campus.ort.edu.ar";
+const CAMPUS_HOST = "campus.ort.edu.ar";
 const LOGGED_IN_DATA_PATH = "/ajaxactions/GetLoggedInData";
 
 // campus.ort.edu.ar sets two same-named PHPSESSID cookies (one on .ort.edu.ar,
@@ -109,6 +113,50 @@ export function splitCampusName(nombre: unknown): {
   return { givenNames: parts[0]!, surname: parts.slice(1).join(" ") };
 }
 
+// node:https rather than fetch, purely so the campus connection can be given an
+// extra trust anchor (see godaddyRootR1.ts) without touching global TLS or
+// pulling in a second copy of undici alongside the one built into fetch.
+// Redirects are deliberately not followed, matching the previous
+// `redirect: "manual"`: a 302 to the login page means "not signed in", not
+// "follow me".
+const CAMPUS_CA = [...tls.rootCertificates, GODADDY_TLS_ROOT_R1];
+
+type CampusResponse = { status: number; location: string | null; body: string };
+
+const getFromCampus = (
+  path: string,
+  cookieHeader: string,
+): Promise<CampusResponse> =>
+  new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      {
+        host: CAMPUS_HOST,
+        path,
+        method: "GET",
+        headers: { Cookie: cookieHeader, Accept: "application/json" },
+        ca: CAMPUS_CA,
+        timeout: REQUEST_TIMEOUT_MS,
+      },
+      (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          body += chunk;
+        });
+        res.on("end", () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            location: (res.headers.location as string | undefined) ?? null,
+            body,
+          }),
+        );
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("campus request timed out")));
+    req.on("error", reject);
+    req.end();
+  });
+
 // The caller gets a bare null because it must not leak *why* identification
 // failed to the browser. The server still needs to know: every branch below
 // collapses into one 401, so without this a misbehaving campus, a session
@@ -137,18 +185,14 @@ export async function fetchLoggedInData(
 ): Promise<CampusIdentity | null> {
   let payload: unknown;
   try {
-    const campusResponse = await fetch(`${CAMPUS_ORIGIN}${LOGGED_IN_DATA_PATH}`, {
-      headers: { Cookie: cookieHeader, Accept: "application/json" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (!campusResponse.ok) {
+    const campusResponse = await getFromCampus(LOGGED_IN_DATA_PATH, cookieHeader);
+    if (campusResponse.status < 200 || campusResponse.status > 299) {
       return relayFailed("campus returned a non-ok status", {
         status: campusResponse.status,
-        location: campusResponse.headers.get("location"),
+        location: campusResponse.location,
       });
     }
-    payload = await campusResponse.json();
+    payload = JSON.parse(campusResponse.body);
   } catch (error) {
     // Timeout, network failure, or a non-JSON body (campus serves an HTML
     // login page to anonymous sessions on some endpoints).
