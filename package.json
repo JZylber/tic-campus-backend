@@ -1,12 +1,12 @@
 {
   "name": "tic-backend",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "vercel-dev": "pnpm dlx prisma generate && vercel dev",
-    "dev": "pnpm dlx prisma generate && nodemon index.ts",
-    "build": "pnpm dlx prisma generate && tsc",
+    "vercel-dev": "prisma generate && vercel dev",
+    "dev": "prisma generate && nodemon index.ts",
+    "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
