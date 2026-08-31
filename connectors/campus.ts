@@ -109,6 +109,21 @@ export function splitCampusName(nombre: unknown): {
   return { givenNames: parts[0]!, surname: parts.slice(1).join(" ") };
 }
 
+// The caller gets a bare null because it must not leak *why* identification
+// failed to the browser. The server still needs to know: every branch below
+// collapses into one 401, so without this a misbehaving campus, a session
+// campus refuses to honour, and a genuinely logged-out visitor are
+// indistinguishable in production. Never takes the cookie — it is a live
+// credential.
+const relayFailed = (reason: string, detail?: unknown): null => {
+  console.warn(
+    "[campus-relay] identification failed:",
+    reason,
+    detail === undefined ? "" : JSON.stringify(detail),
+  );
+  return null;
+};
+
 /**
  * Ask campus who owns this session. Returns null when the session is anonymous
  * or campus is unreachable/misbehaving — the caller cannot distinguish, and
@@ -127,15 +142,27 @@ export async function fetchLoggedInData(
       redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!campusResponse.ok) return null;
+    if (!campusResponse.ok) {
+      return relayFailed("campus returned a non-ok status", {
+        status: campusResponse.status,
+        location: campusResponse.headers.get("location"),
+      });
+    }
     payload = await campusResponse.json();
-  } catch {
+  } catch (error) {
     // Timeout, network failure, or a non-JSON body (campus serves an HTML
     // login page to anonymous sessions on some endpoints).
-    return null;
+    return relayFailed("campus request threw", {
+      name: (error as Error)?.name,
+      message: (error as Error)?.message,
+    });
   }
 
-  if (typeof payload !== "object" || payload === null) return null;
+  if (typeof payload !== "object" || payload === null) {
+    return relayFailed("campus payload was not an object", {
+      type: typeof payload,
+    });
+  }
   const { nombre, nombreJerarquia, imagenURL } = payload as Record<
     string,
     unknown
@@ -148,11 +175,18 @@ export async function fetchLoggedInData(
   // Verified live. Without this check that placeholder would be fed to the
   // student matcher as if it were a real name.
   if (typeof nombreJerarquia === "string" && /an[oó]nim/i.test(nombreJerarquia)) {
-    return null;
+    // The decisive case: campus answered 200 but does not consider this session
+    // signed in. Seen when the session is valid in the student's browser but
+    // not from this server's address.
+    return relayFailed("campus reports an anonymous session", {
+      nombreJerarquia,
+    });
   }
 
   const name = splitCampusName(nombre);
-  if (!name) return null;
+  if (!name) {
+    return relayFailed("could not split campus name", { nombre });
+  }
 
   return {
     givenNames: name.givenNames,
