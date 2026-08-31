@@ -31,6 +31,14 @@ export async function getSubjectStudents(
   const { subject, course, year } = request.params;
   const studentsQuery = await prisma.studentCourse.findMany({
     where: {
+      // A StudentCourse row alone does not make someone a student: staff can
+      // carry an enrolment too (the NR5Z sandbox has an ADMIN enrolled). Every
+      // other consumer of "who is a student here" already agrees on this --
+      // getAllStudents, offeringRoster, the revision-request validator and the
+      // campus identity matcher all require role STUDENT. Without it this
+      // endpoint disagreed with all of them, and the classmate picker it feeds
+      // could offer someone POST /revisionRequest would then reject.
+      student: { role: Role.STUDENT },
       course: {
         name: course,
         year: Number(year),
