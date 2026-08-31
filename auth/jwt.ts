@@ -8,6 +8,13 @@ const options = {
 };
 
 async function verify(payload: any, done: VerifiedCallback) {
+  // Student tokens (auth/studentJwt.ts) are signed with the same secret but
+  // grant a completely different scope. They would already fail the googleId
+  // checks below; reject them explicitly so the boundary is not accidental.
+  if (payload?.typ === "student") {
+    return done(null, false);
+  }
+
   if (
     !payload?.id ||
     !payload?.googleId ||

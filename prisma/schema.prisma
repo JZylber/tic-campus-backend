@@ -48,6 +48,11 @@ model User {
   name            String?
   surname         String?
   googleId        String?           @unique
+  // Numeric campus.ort.edu.ar user id. Nullable because it can only be captured
+  // when GetLoggedInData returns a real `imagenURL` (students without a profile
+  // photo get a generic avatar with no id in it), so it is backfilled
+  // opportunistically as students verify. See controllers/students/identity.ts.
+  campusId        Int?              @unique
   jwtSecureCode   String?
   role            Role              @default(STUDENT)
   studentCourses  StudentCourse[]

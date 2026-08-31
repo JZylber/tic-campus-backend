@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
-import { setCacheHeaders } from "../shared.ts";
+import { setPrivateCacheHeaders } from "../shared.ts";
 import { composeSubjectName } from "../offerings/offeringQueries.ts";
+import { Role } from "../../generated/prisma/enums.ts";
+import type { StudentRequestUser } from "../../auth/studentJwt.ts";
 
 export async function getRevisionRequests(
   request: Request<
@@ -35,7 +37,8 @@ export async function getRevisionRequests(
     .then((revisionRequests) =>
       revisionRequests.map((request) => request.activityId.toString()),
     );
-  setCacheHeaders(response, 100);
+  // Private, not public: this response is scoped to one authenticated student.
+  setPrivateCacheHeaders(response, 100);
   return response.status(200).send(pendingRequestIds);
 }
 
@@ -66,6 +69,46 @@ export async function requestRevision(
     bonusTasks,
     comment,
   } = request.body;
+
+  // Redos are a group flow — the dialog lets you file for yourself and the
+  // partners you worked with — so we cannot simply require every id to be the
+  // requester. Instead: you must be in the list, and everyone else must be a
+  // classmate of yours in this course.
+  const token = (request.user as StudentRequestUser).studentToken;
+  if (!Array.isArray(studentIds) || studentIds.length === 0) {
+    return response
+      .status(400)
+      .send({ message: "Hay que elegir al menos un estudiante." });
+  }
+  const includesRequester = studentIds.some(
+    (id) => id === String(token.sub) || (token.dni !== null && id === token.dni),
+  );
+  if (!includesRequester) {
+    return response.status(403).send({
+      message: "Solo podés pedir reentregas de las que formes parte.",
+    });
+  }
+  const requestedIds = [
+    ...new Set(
+      studentIds.map((id) => (id === token.dni ? token.sub : Number(id))),
+    ),
+  ];
+  if (requestedIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+    return response.status(400).send({ message: "Id de estudiante inválido." });
+  }
+  const classmateCount = await prisma.user.count({
+    where: {
+      id: { in: requestedIds },
+      role: Role.STUDENT,
+      studentCourses: { some: { course: { name: course, year: Number(year) } } },
+    },
+  });
+  if (classmateCount !== requestedIds.length) {
+    return response.status(403).send({
+      message: "Alguno de los estudiantes no cursa esta materia con vos.",
+    });
+  }
+
   // Current date in Argentina timezone
   const date = new Date(
     new Date().toLocaleString("en-US", {
