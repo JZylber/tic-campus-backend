@@ -20,6 +20,14 @@ import type { StudentTokenPayload } from "../../auth/studentJwt.ts";
 // See controllers/students/marks.ts.
 const DNI_KEYED_YEAR = 2025;
 
+// Course.year 0 is the sandbox year: the "Materia de Prueba" / NR5Z fixture is
+// a real Course row with year 0, and its pages live at /0/... on the frontend.
+// A plain `year >= 2000` range check rejects it, which made the test subject
+// the one page where a student could never be identified -- exactly the page
+// used to try the campus flow out.
+const isValidYear = (year: number): boolean =>
+  Number.isInteger(year) && (year === 0 || (year >= 2000 && year <= 2100));
+
 const publicStudentId = (
   year: number,
   id: number,
@@ -43,7 +51,7 @@ export async function startCampusSession(
   response: Response,
 ) {
   const year = Number(request.body.year);
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+  if (!isValidYear(year)) {
     return response
       .status(400)
       .send({ message: "Invalid year", reason: "invalidRequest" });
@@ -168,7 +176,7 @@ export async function impersonateStudent(
   if (!Number.isInteger(studentId) || studentId <= 0) {
     return response.status(400).send({ message: "Invalid student id" });
   }
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+  if (!isValidYear(year)) {
     return response.status(400).send({ message: "Invalid year" });
   }
   const requestedCourse =
