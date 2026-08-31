@@ -5,13 +5,13 @@ import {
   impersonateStudent,
   startCampusSession,
 } from "../../controllers/students/session.ts";
-import requireJwt from "../../middlewares/requireJWT.ts";
+import requireAuth from "../../middlewares/requireAuth.ts";
 import requireRole from "../../middlewares/requireRole.ts";
 
 const router: Router = Router();
 
 router.post("/campus/session", startCampusSession);
 router.delete("/campus/session", endStudentSession);
-router.post("/impersonate", requireJwt, requireRole([Role.ADMIN, Role.TEACHER]), impersonateStudent);
+router.post("/impersonate", requireAuth, requireRole([Role.ADMIN, Role.TEACHER]), impersonateStudent);
 
 export default router;

@@ -57,7 +57,7 @@ REST API backend for the TIC Campus platform. Built with Express, TypeScript, Pr
 │   ├── project/
 │   │   └── calendar.ts
 │   └── shared.ts             # Shared utilities (cache headers, sheet parsing)
-├── middlewares/              # JWT and auth middleware
+├── middlewares/              # Auth (JWT / service key) and role middleware
 ├── connectors/               # Google Sheets and DB connectors
 └── prisma/                   # Prisma schema and migrations
 ```
@@ -81,16 +81,23 @@ pnpm start      # runs compiled output
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `JWT_SECRET` | Secret for signing JWT tokens |
+| `SERVICE_API_KEY` | Shared secret for the service account. Sent as the `X-API-Key` header; grants TEACHER-level access to guarded routes. Leave unset to disable service-account auth. |
 
 ## Endpoints
 
-Routes marked with a role require a staff JWT in `Authorization: Bearer` (stored by the frontend under `ticCampusAccessToken`). Requests without a valid token return `401`; requests with an insufficient role return `403`.
+Routes marked with a role accept either staff credential:
 
-Routes marked **student** require a student token, sent either as the `ticCampusStudentToken` cookie or the `X-Student-Token` header (see `auth/studentJwt.ts`). It is minted by `POST /auth/campus/session`, which relays the caller's campus.ort.edu.ar session cookie server-side and re-derives their identity rather than trusting the browser, or by `POST /auth/impersonate` for staff. Where the route takes a student identifier in the path, it must be the token's own student (`User.id`, or the DNI on 2025 pages) — otherwise `403`.
+- **User** — `Authorization: Bearer <jwt>`, using the token issued by the Google OAuth callback (stored by the frontend under `ticCampusAccessToken`).
+- **Service account** — `X-API-Key: <SERVICE_API_KEY>`, for server-to-server callers. It is treated as a
+  `TEACHER`, so `ADMIN`-only routes remain closed to it.
+
+Requests without a valid credential return `401`; requests with an insufficient role return `403`.
+
+Routes marked **student** require a student token instead, sent either as the `ticCampusStudentToken` cookie or the `X-Student-Token` header (see `auth/studentJwt.ts`). It is minted by `POST /auth/campus/session`, which relays the caller's campus.ort.edu.ar session cookie server-side and re-derives their identity rather than trusting the browser, or by `POST /auth/impersonate` for staff. Where the route takes a student identifier in the path, it must be the token's own student (`User.id`, or the DNI on 2025 pages) — otherwise `403`.
 
 | Symbol | Meaning |
 |---|---|
-| `JWT` | Valid JWT required (any authenticated user) |
+| `JWT` | Valid credential required (any authenticated user, or the service account) |
 | `ADMIN` | Admin role required |
 | `ADMIN / TEACHER` | Admin or teacher role required |
 
@@ -99,7 +106,7 @@ Routes marked **student** require a student token, sent either as the `ticCampus
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/auth/google` | — | Initiates the Google OAuth flow. Accepts an optional `returnTo` query param to redirect after login. |
-| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and redirects to the frontend with it in the URL fragment. |
+| `GET` | `/auth/google/callback` | — | OAuth callback. On success, signs a JWT and returns it to the frontend in the redirect URL fragment (`#token=<jwt>`). |
 | `POST` | `/auth/campus/session` | — | Relays a campus session cookie, re-derives the student's identity from campus.ort.edu.ar server-side, and mints an 8h student token. `404` no match, `409` ambiguous. |
 | `DELETE` | `/auth/campus/session` | — | Clears the student cookie. |
 | `POST` | `/auth/impersonate` | ADMIN, TEACHER | Mints a 2h student token for a teacher/admin to view a student's pages. ADMIN any student; TEACHER only students in courses they teach. Records the actor in the token's `act` claim. |
