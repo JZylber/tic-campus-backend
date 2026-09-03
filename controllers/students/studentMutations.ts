@@ -1,5 +1,31 @@
 import type { Request, Response } from "express";
 import prisma from "../../prisma/prisma.ts";
+import { composeSubjectName } from "../offerings/offeringQueries.ts";
+
+// Optional-offering matches read back with enough of the offering attached to
+// name them in a response — the caller has to be able to tell the admin which
+// ones a course move or removal took away.
+const optionalMatchSelect = {
+  offeringId: true,
+  eligible: {
+    select: {
+      offering: { select: { name: true, subject: { select: { name: true } } } },
+    },
+  },
+} as const;
+
+type OptionalMatch = {
+  offeringId: number;
+  eligible: { offering: { name: string | null; subject: { name: string } } };
+};
+
+const asDroppedOffering = (match: OptionalMatch) => ({
+  offeringId: match.offeringId,
+  displayName: composeSubjectName(
+    match.eligible.offering.subject.name,
+    match.eligible.offering.name,
+  ),
+});
 
 export async function addStudentToCourse(
   request: Request<{ studentId: string }, {}, { courseId: number }>,
@@ -40,15 +66,70 @@ export async function changeStudentCourse(
     return response.status(404).send({ error: "Enrollment not found" });
   }
 
-  const updated = await prisma.studentCourse.update({
-    where: { id: enrollment.id },
-    data: { courseId: newCourseId },
-    include: { course: true },
+  const newCourse = await prisma.course.findUnique({ where: { id: newCourseId } });
+  if (!newCourse) {
+    return response.status(404).send({ error: "Target course not found" });
+  }
+
+  const alreadyThere = await prisma.studentCourse.findFirst({
+    where: { studentId, courseId: newCourseId },
   });
+  if (alreadyThere) {
+    return response.status(409).send({ error: "Student already enrolled in this course" });
+  }
+
+  // StudentOffering points at (studentId, courseId), so the optional enrollments
+  // have to be torn down and rebuilt around the move. Matches whose offering also
+  // serves the new course are carried over; the rest cannot follow the student,
+  // and are named in `droppedOfferings` so the move never loses them silently.
+  const { moved, droppedOfferings } = await prisma.$transaction(async (tx) => {
+    const optionals = await tx.studentOffering.findMany({
+      where: { studentId, courseId: oldCourseId },
+      select: optionalMatchSelect,
+    });
+    const offeringIds = optionals.map((so) => so.offeringId);
+
+    const transferable = offeringIds.length
+      ? await tx.offeringCourse.findMany({
+          where: { courseId: newCourseId, offeringId: { in: offeringIds } },
+          select: { offeringId: true },
+        })
+      : [];
+    const transferableIds = new Set(transferable.map((oc) => oc.offeringId));
+
+    if (offeringIds.length) {
+      await tx.studentOffering.deleteMany({ where: { studentId, courseId: oldCourseId } });
+    }
+
+    const updated = await tx.studentCourse.update({
+      where: { id: enrollment.id },
+      data: { courseId: newCourseId },
+      include: { course: true },
+    });
+
+    if (transferableIds.size) {
+      await tx.studentOffering.createMany({
+        data: [...transferableIds].map((offeringId) => ({
+          studentId,
+          courseId: newCourseId,
+          offeringId,
+        })),
+      });
+    }
+
+    return {
+      moved: updated,
+      droppedOfferings: optionals
+        .filter((so) => !transferableIds.has(so.offeringId))
+        .map(asDroppedOffering),
+    };
+  });
+
   return response.status(200).send({
-    courseId: updated.course.id,
-    course: updated.course.name,
-    year: updated.course.year,
+    courseId: moved.course.id,
+    course: moved.course.name,
+    year: moved.course.year,
+    droppedOfferings,
   });
 }
 
@@ -66,10 +147,23 @@ export async function deleteStudentFromCourse(
     return response.status(404).send({ error: "Enrollment not found" });
   }
 
-  const deleted = await prisma.studentCourse.delete({
-    where: { id: enrollment.id },
+  // Optional-offering matches hang off (studentId, courseId); leaving the course
+  // means leaving its offerings, so they go first or the FK blocks the delete.
+  // They come back named, so the removal never loses them silently.
+  const { deleted, droppedOfferings } = await prisma.$transaction(async (tx) => {
+    const optionals = await tx.studentOffering.findMany({
+      where: { studentId, courseId },
+      select: optionalMatchSelect,
+    });
+    if (optionals.length) {
+      await tx.studentOffering.deleteMany({ where: { studentId, courseId } });
+    }
+    return {
+      deleted: await tx.studentCourse.delete({ where: { id: enrollment.id } }),
+      droppedOfferings: optionals.map(asDroppedOffering),
+    };
   });
-  return response.status(200).send(deleted);
+  return response.status(200).send({ ...deleted, droppedOfferings });
 }
 
 export async function updateStudent(
